@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -43,7 +44,17 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
 
-    // Conexion con Backend FastAPI (Retrofit + Gson)
+    // Base de datos local SQLite (Room) + Sincronizacion en segundo plano (WorkManager)
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Mapa Visual Gratuito sin API Key (OpenStreetMap - OSMDroid)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Conexion con Backend FastAPI / Ollama
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

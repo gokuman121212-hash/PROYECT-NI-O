@@ -1,6 +1,7 @@
 package com.cayma.alertasos.ui
 
 import android.Manifest
+import android.graphics.Color as AndroidColor
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,17 +9,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.cayma.alertasos.ai.OfflineAiEngine
+import com.cayma.alertasos.data.AlertaLocalEntity
+import com.cayma.alertasos.data.AppDatabase
+import com.cayma.alertasos.data.OfflineSyncScheduler
 import com.cayma.alertasos.location.AdaptiveLocationManager
 import com.cayma.alertasos.mesh.OfflineMeshManager
 import com.cayma.alertasos.network.AlertaRequest
@@ -26,11 +30,23 @@ import com.cayma.alertasos.network.PuntoCalor
 import com.cayma.alertasos.network.SosApiService
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Polygon
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var offlineAiEngine: OfflineAiEngine
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Configurar cache de mapas OpenStreetMap
+        Configuration.getInstance().userAgentValue = packageName
+
+        offlineAiEngine = OfflineAiEngine(this)
         val activarDesdeWidget = intent.getBooleanExtra("ACTIVAR_SOS_INMEDIATO", false)
         val locationManager = AdaptiveLocationManager(this)
         val apiService = SosApiService.create()
@@ -42,10 +58,23 @@ class MainActivity : ComponentActivity() {
                     locationManager = locationManager,
                     apiService = apiService,
                     meshManager = meshManager,
+                    aiEngine = offlineAiEngine,
                     sosDesdeWidget = activarDesdeWidget
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Activar IA local solo mientras el usuario usa la app
+        offlineAiEngine.inicializarMientrasAppEnUso()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Liberar RAM de la IA cuando la app pasa a segundo plano
+        offlineAiEngine.liberarMemoriaAlCerrar()
     }
 }
 
@@ -55,11 +84,21 @@ fun PantallaPrincipalAlertaCayma(
     locationManager: AdaptiveLocationManager,
     apiService: SosApiService,
     meshManager: OfflineMeshManager,
+    aiEngine: OfflineAiEngine,
     sosDesdeWidget: Boolean
 ) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
     var moduloSeleccionado by remember { mutableIntStateOf(0) }
     var estadoEnvio by remember { mutableStateOf("Sistema listo en Cayma, Arequipa") }
-    var puntosCalor by remember { mutableStateOf<List<PuntoCalor>>(emptyList()) }
+    var puntosCalor by remember {
+        mutableStateOf(
+            listOf(
+                PuntoCalor(-16.3380, -71.5450, 0.85, "torrentera_cayma"),
+                PuntoCalor(-16.3510, -71.5490, 0.75, "zona_sismica")
+            )
+        )
+    }
     var descripcionReporte by remember { mutableStateOf("") }
     var tipoReporte by remember { mutableStateOf("deslizamiento") }
     var meshActivo by remember { mutableStateOf(false) }
@@ -83,8 +122,7 @@ fun PantallaPrincipalAlertaCayma(
     val launcherPermisos = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { resultados ->
-        val gpsOk = resultados[Manifest.permission.ACCESS_FINE_LOCATION] == true
-        if (gpsOk) {
+        if (resultados[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             locationManager.iniciarRastreoAdaptativo(modoEmergencia = false) {}
             meshManager.activarNodoMalla("Vecino_Cayma_${(100..999).random()}")
             meshActivo = true
@@ -93,21 +131,42 @@ fun PantallaPrincipalAlertaCayma(
 
     fun dispararAlerta(tipo: String, desc: String, emergencia: Boolean) {
         if (emergencia) locationManager.iniciarRastreoAdaptativo(modoEmergencia = true) {}
+
+        // 1. Evaluar primero con la IA embebida en el celular (100% offline)
+        val evaluacionLocal = aiEngine.clasificarReporteSinInternet(desc, tipo)
+        if (!evaluacionLocal.aprobado) {
+            estadoEnvio = "IA Local (${evaluacionLocal.motorUsado}): Reporte poco claro, añade más detalle."
+            return
+        }
+
         val req = AlertaRequest(
             usuario_id = "ciudadano_cayma_01",
             latitud = locationManager.ultimaLatitud,
             longitud = locationManager.ultimaLongitud,
-            tipo = tipo,
+            tipo = evaluacionLocal.tipoClasificado,
             descripcion = desc,
             nivel_bateria = locationManager.obtenerNivelBateria()
         )
+
         scope.launch {
             try {
                 val resp = apiService.enviarAlerta(req)
-                estadoEnvio = "Enviado (${resp.nodo_guardado}) | Confianza IA: ${resp.confianza_ia}"
-            } catch (e: Exception) {
+                estadoEnvio = "Enviado (${resp.nodo_guardado}) | IA: ${resp.confianza_ia}"
+            } catch (_: Exception) {
+                // Sin internet: Guardar en SQLite local (Room), programar subida y retransmitir por Malla P2P
+                db.alertaDao().insertarAlerta(
+                    AlertaLocalEntity(
+                        usuarioId = req.usuario_id,
+                        latitud = req.latitud,
+                        longitud = req.longitud,
+                        tipo = req.tipo,
+                        descripcion = req.descripcion,
+                        nivelBateria = req.nivel_bateria
+                    )
+                )
+                OfflineSyncScheduler.programarSincronizacionAlVolverInternet(context)
                 meshManager.retransmitirAlerta(Gson().toJson(req))
-                estadoEnvio = "Sin red: Retransmitido por Malla Offline P2P"
+                estadoEnvio = "Sin internet: Guardado en SQLite + Enviado por Malla Offline (${evaluacionLocal.motorUsado})"
             }
         }
     }
@@ -115,7 +174,7 @@ fun PantallaPrincipalAlertaCayma(
     LaunchedEffect(Unit) {
         launcherPermisos.launch(permisosRequeridos)
         if (sosDesdeWidget) {
-            dispararAlerta("sos_critico", "SOS activado desde Widget de inicio", true)
+            dispararAlerta("sos_critico", "SOS activado desde Widget", true)
         }
     }
 
@@ -180,25 +239,49 @@ fun PantallaPrincipalAlertaCayma(
                             try {
                                 puntosCalor = apiService.obtenerMapaCalor().puntos
                             } catch (_: Exception) {
-                                estadoEnvio = "No se pudo actualizar el mapa (Modo Offline)"
+                                estadoEnvio = "Mostrando zonas de riesgo cacheadas (Modo Offline)"
                             }
                         }
                     }) {
-                        Text("Actualizar Mapa de Calor (Cayma)")
+                        Text("Sincronizar Mapa de Calor (Ollama + Clima)")
                     }
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(puntosCalor) { punto ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "Riesgo: ${punto.categoria.uppercase()} | Intensidad: ${punto.intensidad} (${punto.lat}, ${punto.lng})",
-                                    modifier = Modifier.padding(12.dp)
-                                )
-                            }
-                        }
+
+                    // Mapa Visual Interactivo de Cayma, Arequipa con circulos de calor
+                    Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        AndroidView(
+                            factory = { ctx ->
+                                MapView(ctx).apply {
+                                    setTileSource(TileSourceFactory.MAPNIK)
+                                    setMultiTouchControls(true)
+                                    controller.setZoom(14.5)
+                                    controller.setCenter(GeoPoint(-16.3425, -71.5467))
+                                }
+                            },
+                            update = { mapView ->
+                                mapView.overlays.clear()
+                                puntosCalor.forEach { punto ->
+                                    val centro = GeoPoint(punto.lat, punto.lng)
+                                    val circuloCalor = Polygon().apply {
+                                        points = Polygon.pointsAsCircle(centro, 280.0 * punto.intensidad)
+                                        fillPaint.color = if (punto.intensidad >= 0.8) {
+                                            AndroidColor.argb(110, 220, 38, 38) // Rojo critico
+                                        } else {
+                                            AndroidColor.argb(100, 245, 158, 11) // Naranja moderado
+                                        }
+                                        outlinePaint.color = AndroidColor.RED
+                                        outlinePaint.strokeWidth = 3f
+                                        title = "${punto.categoria.uppercase()} (Riesgo: ${punto.intensidad})"
+                                    }
+                                    mapView.overlays.add(circuloCalor)
+                                }
+                                mapView.invalidate()
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
                 1 -> {
-                    Text("Nuevo Reporte Ciudadano (Filtrado por IA)", style = MaterialTheme.typography.titleMedium)
+                    Text("Nuevo Reporte (Evaluado por IA en el Celular + Ollama)", style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("deslizamiento", "sismo", "incendio", "medica").forEach { cat ->
                             FilterChip(
@@ -211,7 +294,7 @@ fun PantallaPrincipalAlertaCayma(
                     OutlinedTextField(
                         value = descripcionReporte,
                         onValueChange = { descripcionReporte = it },
-                        label = { Text("Describe qué ocurre (ej. huaico en torrentera)") },
+                        label = { Text("Describe qué ocurre (ej. huaico bajando por torrentera)") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Button(
@@ -239,7 +322,7 @@ fun PantallaPrincipalAlertaCayma(
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Red de Malla Offline (Bluetooth + Wi-Fi Direct)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text("Estado del nodo P2P: ${if (meshActivo) "ACTIVO (Buscando vecinos cercanos)" else "INACTIVO"}")
-                            Text("Si caen las antenas celulares, tu teléfono retransmitirá alertas SOS automáticamente de dispositivo en dispositivo hasta encontrar uno con salida a Internet.")
+                            Text("IA On-Device: Activa en memoria solo mientras usas la aplicación para clasificar alertas sin internet.")
                         }
                     }
                 }
