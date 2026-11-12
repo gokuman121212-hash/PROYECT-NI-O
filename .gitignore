@@ -1,0 +1,10 @@
+﻿venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*firebase-adminsdk*.json
+android-app/.gradle/
+android-app/build/
+android-app/.idea/
+android-app/local.properties
