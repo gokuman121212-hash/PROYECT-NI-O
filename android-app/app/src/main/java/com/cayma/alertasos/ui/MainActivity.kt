@@ -50,7 +50,25 @@ class MainActivity : ComponentActivity() {
         val activarDesdeWidget = intent.getBooleanExtra("ACTIVAR_SOS_INMEDIATO", false)
         val locationManager = AdaptiveLocationManager(this)
         val apiService = SosApiService.create()
-        val meshManager = OfflineMeshManager(this) { _ -> }
+        val dbLocal = AppDatabase.getDatabase(this)
+        val meshManager = OfflineMeshManager(this) { alertaVecinoJson ->
+            try {
+                val alertaRecibida = Gson().fromJson(alertaVecinoJson, AlertaRequest::class.java)
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    dbLocal.alertaDao().insertarAlerta(
+                        AlertaLocalEntity(
+                            usuarioId = alertaRecibida.usuario_id,
+                            latitud = alertaRecibida.latitud,
+                            longitud = alertaRecibida.longitud,
+                            tipo = alertaRecibida.tipo,
+                            descripcion = "[Relevo Mesh] ${alertaRecibida.descripcion}",
+                            nivelBateria = alertaRecibida.nivel_bateria
+                        )
+                    )
+                    OfflineSyncScheduler.programarSincronizacionAlVolverInternet(this@MainActivity)
+                }
+            } catch (_: Exception) { }
+        }
 
         setContent {
             MaterialTheme {
