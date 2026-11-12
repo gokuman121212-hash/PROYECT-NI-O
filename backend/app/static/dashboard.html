@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Control — Alerta Cayma</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        .badge { background: #dc2626; padding: 6px 12px; border-radius: 6px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
+        .btn { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+        .btn:hover { background: #1d4ed8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #0f172a; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Centro de Monitoreo de Riesgos — Cayma, Arequipa</h1>
+            <p id="clima-info">Cargando estado meteorológico y torrenteras...</p>
+        </div>
+        <span class="badge">SISTEMA ACTIVO</span>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Puntos de Calor Activos</h3>
+            <h2 id="total-puntos">0</h2>
+        </div>
+        <div class="card">
+            <h3>Estado de Servidores</h3>
+            <p id="estado-nube">Verificando Firebase y Supabase...</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Categoría</th>
+                <th>Coordenadas (Lat, Lng)</th>
+                <th>Nivel de Riesgo IA</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-alertas"></tbody>
+    </table>
+
+    <script>
+        async function cargarDatos() {
+            try {
+                const res = await fetch('/api/v1/alertas/mapa-calor');
+                const data = await res.json();
+                document.getElementById('total-puntos').innerText = data.total_puntos;
+                const clima = data.clima_y_torrenteras;
+                document.getElementById('clima-info').innerText = 
+                    `Torrenteras: ${clima.riesgo_torrentera} | Temp: ${clima.temperatura_c ?? '--'}°C | Lluvia: ${clima.lluvia_mm ?? 0} mm`;
+
+                const tbody = document.getElementById('tabla-alertas');
+                tbody.innerHTML = '';
+                data.puntos.forEach(p => {
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${p.categoria.toUpperCase()}</strong></td>
+                        <td>${p.lat}, ${p.lng}</td>
+                        <td>${(p.intensidad * 100).toFixed(0)}%</td>
+                    </tr>`;
+                });
+
+                const healthRes = await fetch('/api/v1/alertas/health');
+                const health = await healthRes.json();
+                document.getElementById('estado-nube').innerText = 
+                    `IA: ${health.ia_modelo_cargado ? 'OK' : 'OFF'} | Firebase: ${health.firebase_conectado ? 'OK' : 'Local'} | Supabase: ${health.supabase_conectado ? 'OK' : 'Local'}`;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        cargarDatos();
+        setInterval(cargarDatos, 15000);
+    </script>
+</body>
+</html>

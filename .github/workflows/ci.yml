@@ -1,0 +1,20 @@
+name: Verificar Backend AlertaCayma
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar dependencias y ejecutar pruebas
+        working-directory: ./backend
+        run: |
+          pip install -r requirements.txt pytest
+          PYTHONPATH=. pytest

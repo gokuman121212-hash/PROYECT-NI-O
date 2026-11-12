@@ -1,4 +1,5 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
@@ -17,4 +18,8 @@ app.include_router(sos_router)
 
 @app.get("/")
 def root():
-    return {"mensaje": "Servidor AlertaCayma operativo", "docs": "/docs"}
+    return {"mensaje": "Servidor AlertaCayma operativo", "docs": "/docs", "panel_autoridades": "/panel-control"}
+
+@app.get("/panel-control")
+def panel_control():
+    return FileResponse("app/static/dashboard.html")
