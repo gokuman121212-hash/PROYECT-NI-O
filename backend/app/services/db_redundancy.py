@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import uuid
 from datetime import datetime, timezone
 import os
@@ -14,10 +14,10 @@ class DualDatabaseManager:
         self.supabase_ready = False
         self.db_firestore = None
         self.db_supabase: Client | None = None
+        self.cache_local: list[dict] = []
         self._init_clients()
 
     def _init_clients(self):
-        # Inicializar Firebase si existe el archivo JSON de credenciales
         if os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
             try:
                 if not firebase_admin._apps:
@@ -28,7 +28,6 @@ class DualDatabaseManager:
             except Exception as e:
                 print(f"[WARN] Firebase no disponible: {e}")
 
-        # Inicializar Supabase si existen URL y KEY reales
         if settings.SUPABASE_URL.startswith("https://") and "tu-proyecto" not in settings.SUPABASE_URL:
             try:
                 self.db_supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
@@ -54,7 +53,7 @@ class DualDatabaseManager:
             lambda: self.db_supabase.table("alertas_archivo").insert(data).execute()
         )
 
-    async def guardar_alerta_redundante(self, alerta: AlertaCreate, confianza_ia: float) -> AlertaResponse:
+    async def guardar_alerta_redundante(self, alerta: AlertaCreate, confianza_ia: float, indice_riesgo: float = 0.85) -> AlertaResponse:
         alerta_id = str(uuid.uuid4())
         ahora = datetime.now(timezone.utc)
         
@@ -69,26 +68,23 @@ class DualDatabaseManager:
             "origen_offline_mesh": alerta.origen_offline_mesh,
             "estado": EstadoAlerta.ACTIVA.value,
             "confianza_ia": confianza_ia,
+            "indice_riesgo": indice_riesgo,
             "timestamp": ahora.isoformat()
         }
 
-        nodo_usado = "LOCAL_FALLBACK"
+        nodo_usado = "MODO_LOCAL_SIN_CLAVES"
 
-        # 1. Intentar escritura primaria en Firebase con timeout de 3 segundos
         try:
             await asyncio.wait_for(self._save_firebase(payload), timeout=3.0)
             nodo_usado = "FIREBASE_PRIMARY"
-            # Replicar asincronamente en Supabase para auditoria inmutable
             if self.supabase_ready:
                 asyncio.create_task(self._save_supabase(payload))
         except Exception:
-            # 2. Failover automatico a Supabase si Firebase cae o hay latencia critica
             try:
                 await asyncio.wait_for(self._save_supabase(payload), timeout=4.0)
                 nodo_usado = "SUPABASE_FAILOVER"
             except Exception:
-                # 3. Modo simulacion/contingencia local si aun no configuras claves en .env
-                nodo_usado = "MODO_LOCAL_SIN_CLAVES"
+                self.cache_local.append(payload)
 
         return AlertaResponse(
             **alerta.model_dump(),
@@ -98,5 +94,64 @@ class DualDatabaseManager:
             nodo_guardado=nodo_usado,
             timestamp=ahora
         )
+
+    async def obtener_puntos_persistentes(self) -> list[dict]:
+        if self.supabase_ready:
+            try:
+                loop = asyncio.get_running_loop()
+                res = await loop.run_in_executor(
+                    None,
+                    lambda: self.db_supabase.table("alertas_archivo")
+                    .select("latitud,longitud,indice_riesgo,tipo")
+                    .order("timestamp", desc=True)
+                    .limit(100)
+                    .execute()
+                )
+                return [
+                    {
+                        "lat": r["latitud"],
+                        "lng": r["longitud"],
+                        "intensidad": r.get("indice_riesgo", 0.8),
+                        "categoria": r["tipo"]
+                    }
+                    for r in res.data
+                ]
+            except Exception:
+                pass
+
+        if self.firebase_ready:
+            try:
+                loop = asyncio.get_running_loop()
+                docs = await loop.run_in_executor(
+                    None,
+                    lambda: list(self.db_firestore.collection("alertas_activas").limit(100).stream())
+                )
+                puntos = []
+                for d in docs:
+                    item = d.to_dict()
+                    puntos.append({
+                        "lat": item["latitud"],
+                        "lng": item["longitud"],
+                        "intensidad": item.get("indice_riesgo", 0.8),
+                        "categoria": item["tipo"]
+                    })
+                return puntos
+            except Exception:
+                pass
+
+        puntos_base = [
+            {"lat": -16.3380, "lng": -71.5450, "intensidad": 0.85, "categoria": "torrentera_cayma"},
+            {"lat": -16.3510, "lng": -71.5490, "intensidad": 0.75, "categoria": "zona_sismica"}
+        ]
+        puntos_cache = [
+            {
+                "lat": x["latitud"],
+                "lng": x["longitud"],
+                "intensidad": x.get("indice_riesgo", 0.85),
+                "categoria": x["tipo"]
+            }
+            for x in self.cache_local
+        ]
+        return puntos_base + puntos_cache
 
 db_manager = DualDatabaseManager()
