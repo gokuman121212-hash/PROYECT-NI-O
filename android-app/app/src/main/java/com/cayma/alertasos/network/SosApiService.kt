@@ -3,6 +3,7 @@ package com.cayma.alertasos.network
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 data class AlertaRequest(
@@ -22,12 +23,27 @@ data class AlertaResponse(
     val nodo_guardado: String
 )
 
+data class PuntoCalor(
+    val lat: Double,
+    val lng: Double,
+    val intensidad: Double,
+    val categoria: String
+)
+
+data class MapaCalorResponse(
+    val zona: String,
+    val total_puntos: Int,
+    val puntos: List<PuntoCalor>
+)
+
 interface SosApiService {
     @POST("/api/v1/alertas/sos")
     suspend fun enviarAlerta(@Body alerta: AlertaRequest): AlertaResponse
 
+    @GET("/api/v1/alertas/mapa-calor")
+    suspend fun obtenerMapaCalor(): MapaCalorResponse
+
     companion object {
-        // 10.0.2.2 apunta al localhost de tu PC desde el emulador de Android Studio
         private const val BASE_URL = "http://10.0.2.2:8000/"
 
         fun create(): SosApiService {
