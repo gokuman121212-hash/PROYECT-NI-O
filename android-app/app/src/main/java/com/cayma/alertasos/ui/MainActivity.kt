@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
             // Si recibimos alerta offline de un vecino y tenemos internet, la subimos al servidor
         }
 
-        meshManager.activarNodoMalla("Vecino_Cayma_")
+        meshManager.activarNodoMalla("Vecino_Cayma_${(100..999).random()}")
 
         setContent {
             MaterialTheme {
@@ -74,7 +74,7 @@ fun PantallaPrincipalAlertaCayma(
                     scope.launch {
                         try {
                             val resp = apiService.enviarAlerta(request)
-                            estadoEnvio = "SOS ENVIADO () - ID: "
+                            estadoEnvio = "SOS ENVIADO (${resp.nodo_guardado}) - ID: ${resp.alerta_id.take(8)}"
                         } catch (e: Exception) {
                             // Si no hay internet, retransmitir por Red de Malla Bluetooth/WiFi Direct
                             meshManager.retransmitirAlerta(Gson().toJson(request))
@@ -123,7 +123,7 @@ fun PantallaPrincipalAlertaCayma(
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Módulo activo: ", style = MaterialTheme.typography.titleMedium)
+                    Text("Módulo activo: ${modulos[moduloSeleccionado]}", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(estadoEnvio, color = MaterialTheme.colorScheme.primary)
                 }
