@@ -1,4 +1,4 @@
-import math
+﻿import math
 from datetime import datetime, timezone, timedelta
 import httpx
 
@@ -42,10 +42,45 @@ CAUCES_TORRENTERAS = [
 ]
 
 ZONAS_SEGURAS_CAYMA = [
-    {"nombre": "Puesto Comando COE - Municipalidad de Cayma", "tipo": "coe", "lat": -16.3425, "lng": -71.5467},
-    {"nombre": "Zona Segura #1: Estadio Municipal La Tomilla", "tipo": "refugio", "lat": -16.3532, "lng": -71.5431},
-    {"nombre": "Zona Segura #2: Complejo Deportivo Buenos Aires", "tipo": "refugio", "lat": -16.3318, "lng": -71.5520},
-    {"nombre": "Zona Segura #3: Parque Francisco Bolognesi", "tipo": "refugio", "lat": -16.3610, "lng": -71.5485}
+    # CAYMA
+    {"nombre": "Zona Segura: Plaza Principal de Cayma", "lat": -16.3422, "lng": -71.5468},
+    {"nombre": "Zona Segura: Estadio Municipal La Tomilla (Cayma)", "lat": -16.3526, "lng": -71.5426},
+    {"nombre": "Zona Segura: Complejo Deportivo Buenos Aires (Cayma)", "lat": -16.3315, "lng": -71.5522},
+    {"nombre": "Zona Segura: Parque Francisco Bolognesi (Cayma)", "lat": -16.3614, "lng": -71.5476},
+    {"nombre": "Zona Segura: Parque Principal Acequia Alta (Cayma)", "lat": -16.3478, "lng": -71.5418},
+    {"nombre": "Zona Segura: Complejo Deportivo Dean Valdivia / Enace", "lat": -16.3185, "lng": -71.5565},
+    {"nombre": "Zona Segura: Estadio Casimiro Cuadros (Cayma)", "lat": -16.3248, "lng": -71.5612},
+    # ALTO SELVA ALEGRE
+    {"nombre": "Zona Segura: Complejo Deportivo Roosevelt (Alto Selva Alegre)", "lat": -16.3758, "lng": -71.5262},
+    {"nombre": "Zona Segura: Estadio Apurímac / Independencia (ASA)", "lat": -16.3592, "lng": -71.5225},
+    {"nombre": "Zona Segura: Parque Las Rocas / Villa Ecológica (ASA)", "lat": -16.3475, "lng": -71.5190},
+    # YANAHUARA, CERRO COLORADO Y YURA
+    {"nombre": "Zona Segura: Mirador y Plaza de Yanahuara", "lat": -16.3872, "lng": -71.5418},
+    {"nombre": "Zona Segura: Parque Libertad de Expresión (Umacollo)", "lat": -16.3945, "lng": -71.5478},
+    {"nombre": "Zona Segura: Plaza Las Américas (Cerro Colorado)", "lat": -16.3752, "lng": -71.5595},
+    {"nombre": "Zona Segura: Estadio Arturo Díaz Huerta (Cerro Colorado)", "lat": -16.3690, "lng": -71.5665},
+    {"nombre": "Zona Segura: Explanada Cono Norte / Ciudad Municipal", "lat": -16.3155, "lng": -71.5920},
+    {"nombre": "Zona Segura: Estadio Ciudad de Dios (Yura)", "lat": -16.2565, "lng": -71.6780},
+    # CERCADO DE AREQUIPA
+    {"nombre": "Zona Segura: Plaza de Armas de Arequipa", "lat": -16.3988, "lng": -71.5369},
+    {"nombre": "Zona Segura: Estadio Monumental de la UNSA", "lat": -16.4065, "lng": -71.5205},
+    {"nombre": "Zona Segura: Estadio Mariano Melgar (IV Centenario)", "lat": -16.4042, "lng": -71.5295},
+    {"nombre": "Zona Segura: Parque Selva Alegre / Chilina", "lat": -16.3885, "lng": -71.5325},
+    # MIRAFLORES, MARIANO MELGAR Y PAUCARPATA
+    {"nombre": "Zona Segura: Plaza Mayta Cápac (Miraflores)", "lat": -16.3925, "lng": -71.5210},
+    {"nombre": "Zona Segura: Estadio Maracaná (Mariano Melgar)", "lat": -16.4035, "lng": -71.5095},
+    {"nombre": "Zona Segura: Estadio Máximo Carrasco (Paucarpata)", "lat": -16.4255, "lng": -71.5030},
+    {"nombre": "Zona Segura: Plaza Principal de Paucarpata", "lat": -16.4305, "lng": -71.5015},
+    # J.L. BUSTAMANTE, SOCABAYA, HUNTER, SACHACA, TIABAYA, CHARACATO, SABANDIA Y UCHUMAYO
+    {"nombre": "Zona Segura: Parque de la Cultura (J.L. Bustamante)", "lat": -16.4240, "lng": -71.5320},
+    {"nombre": "Zona Segura: Palacio del Deporte (J.L. Bustamante)", "lat": -16.4310, "lng": -71.5245},
+    {"nombre": "Zona Segura: Plaza Principal de Socabaya", "lat": -16.4475, "lng": -71.5350},
+    {"nombre": "Zona Segura: Estadio Juan Velasco Alvarado (Hunter)", "lat": -16.4395, "lng": -71.5560},
+    {"nombre": "Zona Segura: Estadio Municipal de Sachaca", "lat": -16.4250, "lng": -71.5680},
+    {"nombre": "Zona Segura: Plaza Principal de Tiabaya", "lat": -16.4495, "lng": -71.5925},
+    {"nombre": "Zona Segura: Plaza Principal de Sabandía", "lat": -16.4530, "lng": -71.4980},
+    {"nombre": "Zona Segura: Plaza Principal de Characato", "lat": -16.4695, "lng": -71.4865},
+    {"nombre": "Zona Segura: Plaza Principal de Uchumayo / Congata", "lat": -16.4345, "lng": -71.6350},
 ]
 
 def calcular_distancia_metros(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

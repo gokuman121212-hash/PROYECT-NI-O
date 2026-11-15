@@ -43,3 +43,9 @@ def panel_control():
         "app/static/dashboard.html",
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
     )
+@app.get("/simulador-campo")
+def simulador_campo():
+    return FileResponse(
+        "app/static/simulador.html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+    )

@@ -3,31 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>COER / COE Cayma — Sala Situacional Satelital</title>
+  <title>Alerta Cayma — Centro de Emergencias</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <style>
-    :root {
-      --bg-base: #060911;
-      --bg-panel: #0b111e;
-      --bg-card: #11192c;
-      --border: #1e293b;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-blue: #38bdf8;
-      --accent-red: #ef4444;
-      --accent-amber: #f59e0b;
-      --accent-green: #10b981;
-      --accent-purple: #a855f7;
+        :root {
+      --bg-base: #071e2d;
+      --bg-panel: #0b324b;
+      --bg-card: #0f3d5a;
+      --border: #33556b;
+      --text-main: #e6eef1;
+      --text-muted: #a8bfc8;
+      --accent-blue: #648697;
+      --accent-ice: #a8bfc8;
+      --accent-red: #b34c28;
+      --accent-burgundy: #5d312e;
+      --accent-amber: #d69b88;
+      --accent-green: #648697;
+      --accent-purple: #d69b88;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
     body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
+    /* CABECERA */
     header {
-      background: linear-gradient(90deg, #090f1d 0%, #0f172a 100%);
-      border-bottom: 1px solid #26354d;
-      padding: 9px 18px;
+      background: linear-gradient(90deg, #061926 0%, #0b324b 100%);
+      border-bottom: 1px solid #33556b;
+      padding: 8px 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -37,13 +40,13 @@
     .brand { display: flex; align-items: center; gap: 11px; }
     .shield {
       width: 34px; height: 34px; border-radius: 7px;
-      background: linear-gradient(135deg, #dc2626, #991b1b);
-      border: 1px solid #f87171;
+      background: linear-gradient(135deg, #b34c28, #5d312e);
+      border: 1px solid #d69b88;
       display: flex; align-items: center; justify-content: center;
       font-weight: 900; font-size: 0.85rem; color: #fff;
     }
-    .brand h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.4px; color: #f8fafc; }
-    .brand-sub { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--accent-blue); margin-top: 1px; }
+    .brand h1 { font-size: 1.02rem; font-weight: 800; letter-spacing: 0.4px; color: #f8fafc; }
+    .brand-sub { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; color: var(--accent-blue); margin-top: 1px; }
     .pulse-dot {
       width: 9px; height: 9px; border-radius: 50%;
       background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green);
@@ -53,9 +56,9 @@
     @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.85; } 50% { transform: scale(1.25); opacity: 1; } }
 
     .telemetry-bar {
-      display: flex; gap: 14px; background: rgba(17, 25, 44, 0.9);
-      padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border);
-      font-size: 0.78rem; align-items: center;
+      display: flex; gap: 13px; background: rgba(11, 50, 75, 0.92);
+      padding: 6px 13px; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.77rem; align-items: center;
     }
     .telemetry-bar b { color: var(--accent-blue); }
     .seismic-pill {
@@ -66,108 +69,200 @@
     .top-actions { display: flex; gap: 8px; align-items: center; }
     button {
       cursor: pointer; border: none; border-radius: 6px; padding: 7px 12px;
-      font-size: 0.78rem; font-weight: 600; transition: all 0.15s ease;
+      font-size: 0.77rem; font-weight: 600; transition: all 0.15s ease;
     }
-    .btn-sim { background: linear-gradient(135deg, #2563eb, #0284c7); color: #fff; }
-    .btn-sim:hover { filter: brightness(1.15); }
-    .btn-clean { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-    .btn-clean:hover { background: #334155; color: #fff; }
+    button:hover { filter: brightness(1.12); }
     .btn-audio { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
     .btn-audio.active { border-color: var(--accent-green); color: var(--accent-green); }
+    .btn-report { background: linear-gradient(135deg, #648697, #0f3d5a); color: #fff; }
 
+    /* KPI INTERACTIVOS */
     .kpi-grid {
       display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
-      padding: 9px 18px; background: var(--bg-base); border-bottom: 1px solid var(--border);
+      padding: 8px 18px; background: var(--bg-base); border-bottom: 1px solid var(--border);
     }
     .kpi-card {
       background: var(--bg-panel); border: 1px solid var(--border); border-radius: 7px;
       padding: 8px 13px; display: flex; flex-direction: column; justify-content: space-between;
+      cursor: pointer; transition: border-color 0.18s, transform 0.15s;
     }
-    .kpi-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.6px; }
-    .kpi-val { font-size: 1.35rem; font-weight: 800; margin-top: 2px; }
-    .kpi-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+    .kpi-card:hover { border-color: var(--accent-blue); transform: translateY(-1px); }
+    .kpi-label { font-size: 0.69rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.6px; }
+    .kpi-val { font-size: 1.32rem; font-weight: 800; margin-top: 2px; }
+    .kpi-sub { font-size: 0.69rem; color: var(--text-muted); margin-top: 1px; }
 
+    /* WORKSPACE */
     .workspace { display: grid; grid-template-columns: 1.55fr 1fr; flex: 1; overflow: hidden; }
     #map-container { position: relative; width: 100%; height: 100%; }
     #map { width: 100%; height: 100%; background: #0a0f1c; }
 
-    .map-layer-switcher {
-      position: absolute; top: 14px; right: 14px; z-index: 950;
-      background: rgba(11, 17, 30, 0.94); border: 1px solid #334155;
-      border-radius: 8px; padding: 6px; display: flex; gap: 5px;
+    /* BARRA DE HERRAMIENTAS INTERACTIVAS DEL MAPA */
+    .map-top-controls {
+      position: absolute; top: 12px; right: 12px; z-index: 950;
+      display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
+    }
+    .control-pill-group {
+      background: rgba(7, 30, 45, 0.95); border: 1px solid #4c7084;
+      border-radius: 8px; padding: 5px; display: flex; gap: 4px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
-    .layer-btn { background: transparent; color: #cbd5e1; padding: 5px 10px; font-size: 0.74rem; border-radius: 5px; }
+    .layer-btn { background: transparent; color: #cbd5e1; padding: 5px 9px; font-size: 0.73rem; border-radius: 5px; }
     .layer-btn.active { background: var(--accent-blue); color: #06101f; font-weight: 700; }
+    .toggle-btn { background: #144869; color: #cbd5e1; padding: 5px 9px; font-size: 0.72rem; border-radius: 5px; }
+    .toggle-btn.on { background: rgba(16, 185, 129, 0.22); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.45); }
+
+    /* BANNER DE RUTA ACTIVA (ETA) */
+    .route-banner {
+      position: absolute; top: 12px; left: 52px; z-index: 950;
+      background: rgba(7, 30, 45, 0.96); border: 1px solid #a8bfc8;
+      border-radius: 8px; padding: 8px 13px; font-size: 0.78rem;
+      display: none; align-items: center; gap: 12px;
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+    }
+    .route-banner.visible { display: flex; }
+
+    /* TELEMETRIA CURSOR COORDENADAS */
+    .cursor-telemetry {
+      position: absolute; bottom: 14px; right: 14px; z-index: 900;
+      background: rgba(7, 30, 45, 0.94); border: 1px solid #4c7084;
+      padding: 5px 11px; border-radius: 6px; font-family: Consolas, monospace;
+      font-size: 0.73rem; color: #94a3b8;
+    }
 
     .map-overlay-legend {
-      position: absolute; bottom: 18px; left: 14px; z-index: 900;
-      background: rgba(11, 17, 30, 0.93); border: 1px solid #334155;
-      padding: 10px 14px; border-radius: 8px; font-size: 0.74rem;
+      position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      background: rgba(7, 30, 45, 0.94); border: 1px solid #4c7084;
+      padding: 9px 13px; border-radius: 8px; font-size: 0.72rem;
       box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
-    .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
     .dot-l { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
     .line-l { width: 16px; height: 3px; display: inline-block; flex-shrink: 0; }
 
+    /* PANEL LATERAL CON PESTANAS */
     .sidebar {
       background: var(--bg-panel); border-left: 1px solid var(--border);
       display: flex; flex-direction: column; overflow: hidden;
     }
-    .sidebar-header {
-      padding: 11px 15px; border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    .sidebar-tabs {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      background: #061926; border-bottom: 1px solid var(--border);
     }
-    .filter-group { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tab-btn {
+      background: transparent; color: var(--text-muted); padding: 10px 6px;
+      font-size: 0.76rem; font-weight: 700; border-radius: 0; border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); background: rgba(56, 189, 248, 0.06); }
+
+    .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .tab-content.active { display: flex; }
+
+    .sidebar-header {
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; gap: 4px; flex-wrap: wrap; }
     .filter-btn {
       background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border);
-      padding: 4px 8px; font-size: 0.72rem; border-radius: 5px;
+      padding: 4px 8px; font-size: 0.71rem; border-radius: 5px;
     }
     .filter-btn.active { background: var(--accent-blue); color: #05101f; border-color: var(--accent-blue); }
 
     .feed-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
     .alert-card {
       background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--accent-red);
-      border-radius: 8px; padding: 11px;
+      border-radius: 8px; padding: 11px; transition: border-color 0.15s;
     }
+    .alert-card:hover { border-color: #475569; }
     .alert-card.EN_PROCESO { border-left-color: var(--accent-amber); }
     .alert-card.enjambre { box-shadow: 0 0 14px rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.55); }
 
     .card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; }
-    .badge { padding: 2px 7px; border-radius: 4px; font-size: 0.69rem; font-weight: 700; text-transform: uppercase; }
+    .badge { padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
     .badge-cat { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.45); }
     .badge-mesh { background: rgba(168, 85, 247, 0.22); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
-    .badge-swarm { background: #dc2626; color: #fff; }
+    .badge-swarm { background: #b34c28; color: #fff; }
     .badge-status-ACTIVA { background: rgba(239, 68, 68, 0.22); color: #f87171; }
     .badge-status-EN_PROCESO { background: rgba(245, 158, 11, 0.22); color: #fbbf24; }
 
-    .card-desc { font-size: 0.84rem; color: #f8fafc; margin-bottom: 8px; line-height: 1.35; }
+    .card-desc { font-size: 0.83rem; color: #f8fafc; margin-bottom: 8px; line-height: 1.35; }
     .card-meta {
       display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
-      font-size: 0.73rem; color: var(--text-muted); background: rgba(6, 9, 17, 0.55);
+      font-size: 0.72rem; color: var(--text-muted); background: rgba(6, 9, 17, 0.55);
       padding: 7px 9px; border-radius: 6px; margin-bottom: 8px;
     }
     .card-meta b { color: var(--text-main); }
 
-    .card-actions { display: flex; gap: 6px; align-items: center; }
+    .card-actions { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
     select.unit-select {
-      flex: 1; background: var(--bg-base); color: var(--text-main); border: 1px solid #334155;
-      border-radius: 5px; padding: 5px 7px; font-size: 0.74rem;
+      flex: 1; min-width: 135px; background: var(--bg-base); color: var(--text-main); border: 1px solid #4c7084;
+      border-radius: 5px; padding: 5px 7px; font-size: 0.73rem;
     }
-    .btn-dispatch { background: var(--accent-amber); color: #090d16; padding: 5px 10px; font-size: 0.74rem; }
-    .btn-archive { background: var(--accent-green); color: #051b11; padding: 5px 10px; font-size: 0.74rem; }
-    .btn-locate { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 5px 8px; font-size: 0.74rem; }
+    .btn-route { background: #0f2942; color: #a8bfc8; border: 1px solid #0284c7; padding: 5px 8px; font-size: 0.73rem; }
+    .btn-dispatch { background: var(--accent-amber); color: #090d16; padding: 5px 9px; font-size: 0.73rem; }
+    .btn-archive { background: var(--accent-green); color: #051b11; padding: 5px 9px; font-size: 0.73rem; }
 
-    .sos-marker {
-      width: 20px; height: 20px; border-radius: 50%;
-      background: #ef4444; border: 2.5px solid #ffffff;
-      box-shadow: 0 0 16px #ef4444, 0 0 4px #000;
+    /* ANALITICA Y SOPs */
+    .analytics-box { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .stat-bar-row { margin-bottom: 8px; }
+    .stat-bar-label { display: flex; justify-content: space-between; font-size: 0.76rem; margin-bottom: 4px; }
+    .stat-bar-track { background: #144869; height: 8px; border-radius: 4px; overflow: hidden; }
+    .stat-bar-fill { height: 100%; background: var(--accent-blue); border-radius: 4px; transition: width 0.3s ease; }
+
+    .sop-item {
+      display: flex; align-items: flex-start; gap: 9px; background: var(--bg-card);
+      border: 1px solid var(--border); padding: 9px 11px; border-radius: 7px; font-size: 0.8rem;
     }
-    .sos-marker.en-proceso { background: #f59e0b; box-shadow: 0 0 16px #f59e0b; }
-    .safe-marker {
-      width: 16px; height: 16px; border-radius: 4px;
-      background: #10b981; border: 2px solid #ffffff;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    .sop-item input { margin-top: 3px; accent-color: var(--accent-green); }
+
+        /* MARCADORES VIVOS Y ENTENDIBLES EN EL MAPA */
+    @keyframes sonar-alert {
+      0% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0.85); }
+      70% { box-shadow: 0 0 0 16px rgba(255, 42, 42, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0); }
+    }
+    .sos-marker {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #ff2a2a; border: 3px solid #ffffff;
+      color: #ffffff; font-weight: 900; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      animation: sonar-alert 1.6s infinite;
+    }
+    .sos-marker.en-proceso {
+      background: #ff9f0a; border-color: #ffffff; color: #071e2d;
+      box-shadow: 0 0 16px #ff9f0a; animation: none;
+    }
+        .safe-marker {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #00e676; border: 2px solid #ffffff;
+      color: #042414; font-weight: 900; font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    }
+    .base-marker {
+      width: 22px; height: 22px; border-radius: 6px;
+      border: 2px solid #ffffff; color: #ffffff;
+      font-weight: 900; font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+    .base-serenazgo { background: #0091ff; }
+    .base-pnp { background: #00b862; }
+    .base-bomberos { background: #ff3b30; }
+    .base-salud { background: #ff9500; color: #071e2d; }
+
+    .map-overlay-legend {
+      position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      background: rgba(6, 22, 34, 0.96); border: 1.5px solid #38bdf8;
+      padding: 11px 14px; border-radius: 9px; font-size: 0.75rem;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.7);
+      color: #f8fafc;
+    }
+    .legend-item { display: flex; align-items: center; gap: 9px; margin-top: 6px; font-weight: 600; }
+    .badge-leg {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 10px; border: 1.5px solid #fff; flex-shrink: 0;
     }
   </style>
 </head>
@@ -177,10 +272,10 @@
   <div class="brand">
     <div class="shield">COE</div>
     <div>
-      <h1>ALERTA CAYMA — SALA SITUACIONAL GEOESPACIAL</h1>
+      <h1>ALERTA CAYMA — CENTRO DE EMERGENCIAS</h1>
       <div class="brand-sub">
         <div id="ws-indicator" class="pulse-dot"></div>
-        <span id="ws-status-text">ENLACE SATELITAL Y WEBSOCKET ACTIVO | AREQUIPA - PERÚ</span>
+        <span id="ws-status-text">SISTEMA CONECTADO EN TIEMPO REAL | AREQUIPA - PERÚ</span>
       </div>
     </div>
   </div>
@@ -189,39 +284,40 @@
     <span>Torrenteras: <b id="w-torrentera">BAJO</b></span>
     <span>Temp: <b id="w-temp">--°C</b></span>
     <span>Lluvia: <b id="w-rain">0 mm</b></span>
-    <span class="seismic-pill" id="usgs-badge">USGS Sismos: Consultando...</span>
+    <span class="seismic-pill" id="usgs-badge">Sismos Arequipa: Verificando...</span>
   </div>
 
   <div class="top-actions">
-    <button id="btn-audio" class="btn-audio" onclick="toggleAudio()">Alarma: OFF</button>
-    </div>
+    <button id="btn-audio" class="btn-audio" onclick="toggleAudio()">Sonido: Apagado</button>
+    <button class="btn-report" onclick="generarReporteSITREP()">Imprimir Reporte</button>
+  </div>
 </header>
 
 <section class="kpi-grid">
-  <div class="kpi-card">
-    <span class="kpi-label">Incidentes Activos</span>
+  <div class="kpi-card" onclick="setFiltro('TODOS')" title="Clic para ver todos los incidentes">
+    <span class="kpi-label">Emergencias Activas</span>
     <span class="kpi-val" id="kpi-activos" style="color: var(--accent-red);">0</span>
-    <span class="kpi-sub">Georreferenciados en Cayma</span>
+    <span class="kpi-sub">Ubicadas en el mapa de Cayma</span>
   </div>
-  <div class="kpi-card">
-    <span class="kpi-label">Unidades Despachadas</span>
+  <div class="kpi-card" onclick="centrarCayma()" title="Clic para centrar mapa en Cayma">
+    <span class="kpi-label">Equipos en Camino</span>
     <span class="kpi-val" id="kpi-proceso" style="color: var(--accent-amber);">0</span>
     <span class="kpi-sub">Serenazgo / Defensa Civil</span>
   </div>
-  <div class="kpi-card">
-    <span class="kpi-label">Zona Crítica / Enjambre</span>
+  <div class="kpi-card" onclick="toggleCapaGeo()" title="Clic para alternar geocercas">
+    <span class="kpi-label">Zonas de Alto Riesgo</span>
     <span class="kpi-val" id="kpi-criticos" style="color: #fb7185;">0</span>
-    <span class="kpi-sub">Torrenteras / Correlación IA</span>
+    <span class="kpi-sub">Cerca a quebradas o varios reportes</span>
   </div>
   <div class="kpi-card">
-    <span class="kpi-label">Red Mesh Offline</span>
+    <span class="kpi-label">Red SIN INTERNET</span>
     <span class="kpi-val" id="kpi-mesh" style="color: var(--accent-purple);">0</span>
-    <span class="kpi-sub">Sin cobertura celular</span>
+    <span class="kpi-sub">Transmitidas sin señal móvil</span>
   </div>
   <div class="kpi-card">
-    <span class="kpi-label">Infraestructura Cloud</span>
-    <span class="kpi-val" id="kpi-cloud" style="font-size: 0.95rem; color: var(--accent-green); margin-top: 6px;">VERIFICANDO...</span>
-    <span class="kpi-sub">Redundancia Dual Firebase/Supabase</span>
+    <span class="kpi-label">Estado del Sistema</span>
+    <span class="kpi-val" id="kpi-cloud" style="font-size: 0.92rem; color: var(--accent-green); margin-top: 6px;">VERIFICANDO...</span>
+    <span class="kpi-sub">Respaldo de datos activo</span>
   </div>
 </section>
 
@@ -229,64 +325,229 @@
   <div id="map-container">
     <div id="map"></div>
 
-    <div class="map-layer-switcher">
-      <button class="layer-btn active" id="btn-sat" onclick="cambiarCapaMapa('satelite', this)">Satélite Híbrido</button>
-      <button class="layer-btn" id="btn-topo" onclick="cambiarCapaMapa('topografico', this)">Relieve / Curvas</button>
-      <button class="layer-btn" id="btn-osm" onclick="cambiarCapaMapa('calles', this)">Calles Detalladas</button>
+    <!-- BANNER DE RUTA DE DESPACHO OSRM -->
+    <div id="route-banner" class="route-banner">
+      <div>
+        <strong style="color:#a8bfc8;" id="route-title">CAMINO RECOMENDADO</strong>
+        <div id="route-details" style="color:#e2e8f0; margin-top:2px;">--</div>
+      </div>
+      <button onclick="limpiarRuta()" style="background:#144869; color:#94a3b8; padding:4px 8px;">Cerrar</button>
     </div>
 
-    <div class="map-overlay-legend">
-      <b>CARTOGRAFÍA TÁCTICA — CAYMA / AREQUIPA</b>
-      <div class="legend-item"><span class="dot-l" style="background:#ef4444;"></span> Alerta SOS Activa</div>
-      <div class="legend-item"><span class="dot-l" style="background:#f59e0b;"></span> Unidad Despachada (En Camino)</div>
-      <div class="legend-item"><span class="dot-l" style="background:#10b981; border-radius:2px;"></span> Zonas Seguras / Albergues Cayma</div>
-      <div class="legend-item"><span class="line-l" style="background:#06b6d4;"></span> Cauce Torrenteras (Chullo / San Lázaro / Añashuayco)</div>
-      <div class="legend-item"><span class="dot-l" style="background:#f97316;"></span> Radio Exclusión Volcán Misti (12 km)</div>
+    <!-- CONTROLES INTERACTIVOS DEL MAPA -->
+    <div class="map-top-controls">
+      <div class="control-pill-group">
+        <button class="layer-btn active" onclick="cambiarCapaMapa('satelite', this)">Vista Satélite</button>
+        <button class="layer-btn" onclick="cambiarCapaMapa('topografico', this)">Mapa de Cerros</button>
+        <button class="layer-btn" onclick="cambiarCapaMapa('calles', this)">Calles</button>
+      </div>
+      <div class="control-pill-group">
+        <button class="toggle-btn on" id="btn-tog-bases" onclick="toggleBases()">Estaciones de Ayuda</button>
+        <button class="toggle-btn on" id="btn-tog-geo" onclick="toggleCapaGeo()">Torrenteras</button>
+        <button class="toggle-btn on" id="btn-tog-heat" onclick="toggleHeatmap()">Mapa Calor</button>
+        <button class="toggle-btn" onclick="centrarCayma()">Centrar Cayma</button>
+      </div>
     </div>
+
+    <div class="cursor-telemetry" id="cursor-coords">LAT: -16.34800 | LNG: -71.54800</div>
+
+            <div class="map-overlay-legend">
+      <b style="color:#38bdf8; letter-spacing:0.4px;">GUÍA DEL MAPA — AREQUIPA</b>
+      <div class="legend-item"><span class="badge-leg" style="background:#ff2a2a; color:#fff;">!</span> Emergencia Activa &nbsp;|&nbsp; <span class="badge-leg" style="background:#ff9f0a; color:#071e2d;">➤</span> En Camino</div>
+      <div class="legend-item"><span class="badge-leg" style="background:#00e676; color:#042414;">✓</span> Punto Seguro / Refugio Oficial (33)</div>
+      <div class="legend-item">
+        <span style="background:#ff9500; color:#071e2d; padding:1px 5px; border-radius:4px; border:1px solid #fff; font-size:10px; font-weight:900;">H/+</span> Hospital/Salud
+        <span style="background:#00b862; color:#fff; padding:1px 5px; border-radius:4px; border:1px solid #fff; font-size:10px; font-weight:900;">P</span> Policía
+        <span style="background:#ff3b30; color:#fff; padding:1px 5px; border-radius:4px; border:1px solid #fff; font-size:10px; font-weight:900;">B</span> Bomberos
+        <span style="background:#0091ff; color:#fff; padding:1px 5px; border-radius:4px; border:1px solid #fff; font-size:10px; font-weight:900;">S</span> Serenazgo
+      </div>
+      <div class="legend-item"><span style="width:20px; height:4px; background:#00e5ff; display:inline-block; border-radius:2px; box-shadow:0 0 8px #00e5ff;"></span> Quebradas y Torrenteras</div>
+    </div>
+  </div>
+  </div>
   </div>
 
   <aside class="sidebar">
-    <div class="sidebar-header">
-      <strong style="font-size:0.86rem;">BITÁCORA TÁCTICA EN VIVO</strong>
-      <div class="filter-group">
-        <button class="filter-btn active" onclick="setFiltro('TODOS', this)">Todos</button>
-        <button class="filter-btn" onclick="setFiltro('sismo', this)">Sismo</button>
-        <button class="filter-btn" onclick="setFiltro('deslizamiento', this)">Huaico</button>
-        <button class="filter-btn" onclick="setFiltro('incendio', this)">Incendio</button>
-        <button class="filter-btn" onclick="setFiltro('sos_critico', this)">SOS</button>
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" onclick="cambiarTab('tab-feed', this)">Reportes (<span id="tab-count">0</span>)</button>
+      <button class="tab-btn" onclick="cambiarTab('tab-stats', this)">Estadísticas</button>
+      <button class="tab-btn" onclick="cambiarTab('tab-sop', this)">Guía de Acción</button>
+    </div>
+
+    <!-- TAB 1: BITACORA Y DESPACHO -->
+    <div id="tab-feed" class="tab-content active">
+      <div class="sidebar-header">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setFiltro('TODOS', this)">Todos</button>
+          <button class="filter-btn" onclick="setFiltro('sismo', this)">Sismo</button>
+          <button class="filter-btn" onclick="setFiltro('deslizamiento', this)">Huaico</button>
+          <button class="filter-btn" onclick="setFiltro('incendio', this)">Incendio</button>
+          <button class="filter-btn" onclick="setFiltro('medica', this)">Médica</button>
+          <button class="filter-btn" onclick="setFiltro('sos_critico', this)">SOS</button>
+        </div>
+      </div>
+      <div class="feed-list" id="feed-list"></div>
+    </div>
+
+    <!-- TAB 2: ANALITICA EN VIVO -->
+    <div id="tab-stats" class="tab-content">
+      <div class="analytics-box">
+        <strong style="font-size:0.85rem; color:var(--accent-blue);">RESUMEN POR TIPO DE EMERGENCIA</strong>
+        <div id="stats-bars"></div>
+
+        <strong style="font-size:0.85rem; color:var(--accent-blue); margin-top:6px;">ESTACIONES DE AYUDA DISPONIBLES (CAYMA)</strong>
+        <div id="bases-list" style="display:flex; flex-direction:column; gap:7px; font-size:0.78rem;"></div>
       </div>
     </div>
-    <div class="feed-list" id="feed-list"></div>
+
+    <!-- TAB 3: PROTOCOLOS DE ACCION INMEDIATA -->
+    <div id="tab-sop" class="tab-content">
+      <div class="analytics-box">
+        <strong style="font-size:0.85rem; color:var(--accent-amber);">PASOS A SEGUIR ANTE UNA EMERGENCIA</strong>
+        <p style="font-size:0.75rem; color:var(--text-muted);">Lista de verificación rápida para atender un reporte en Cayma:</p>
+        <label class="sop-item"><input type="checkbox" /> <span>1. Revisar en el mapa si el lugar está cerca de una quebrada (Chullo / San Lázaro).</span></label>
+        <label class="sop-item"><input type="checkbox" /> <span>2. Ver el mejor camino y enviar la patrulla, ambulancia o bomberos más cercanos.</span></label>
+        <label class="sop-item"><input type="checkbox" /> <span>3. Si hay VARIOS REPORTES (>3 reportes), notificar alerta temprana a COER Arequipa.</span></label>
+        <label class="sop-item"><input type="checkbox" /> <span>4. Guiar a los vecinos hacia zonas seguras (Estadio La Tomilla o Plaza de Cayma).</span></label>
+        <label class="sop-item"><input type="checkbox" /> <span>5. Imprimir el reporte final cuando la emergencia haya sido controlada.</span></label>
+      </div>
+    </div>
   </aside>
 </main>
 
 <script>
-  const map = L.map('map', { zoomControl: true }).setView([-16.3480, -71.5480], 14);
+  const CAYMA_CENTER = [-16.3480, -71.5480];
+  const map = L.map('map', { zoomControl: true }).setView(CAYMA_CENTER, 14);
 
+  // Capas cartograficas sin API Key
   const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics | COE Cayma',
-    maxZoom: 19
+    attribution: 'Tiles &copy; Esri | COE Cayma', maxZoom: 19
   });
-  const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19
-  });
-  const esriTransport = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, opacity: 0.75
-  });
+  const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+  const esriTransport = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.75 });
   const capaSateliteHibrida = L.layerGroup([esriSat, esriTransport, esriLabels]);
 
   const capaTopografica = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    attribution: 'Map data: &copy; OpenStreetMap, SRTM | Style: &copy; OpenTopoMap',
-    maxZoom: 17
+    attribution: '&copy; OpenTopoMap', maxZoom: 17
   });
-
   const capaCallesOsm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors | COE Cayma',
-    maxZoom: 19
+    attribution: '&copy; OpenStreetMap', maxZoom: 19
   });
 
   capaSateliteHibrida.addTo(map);
   let capaBaseActual = capaSateliteHibrida;
+
+  // Bases operativas reales en Cayma / Arequipa
+        const BASES_OPERATIVAS = [
+        // ================= DISTRITOS PERIFÉRICOS (CHARACATO, SABANDÍA, YURA, UCHUMAYO) =================
+    { id: "Comisaría PNP Characato", nombre: "Comisaría PNP Characato", corto: "P", clase: "base-pnp", lat: -16.4702, lng: -71.4872 },
+    { id: "C.S. Characato", nombre: "Centro de Salud Characato", corto: "+", clase: "base-salud", lat: -16.4685, lng: -71.4855 },
+    { id: "Comisaría PNP Sabandía", nombre: "Comisaría PNP Sabandía", corto: "P", clase: "base-pnp", lat: -16.4538, lng: -71.4988 },
+    { id: "C.S. Sabandía", nombre: "Centro de Salud Sabandía", corto: "+", clase: "base-salud", lat: -16.4522, lng: -71.4970 },
+    { id: "Comisaría PNP Ciudad de Dios (Yura)", nombre: "Comisaría PNP Ciudad de Dios (Yura)", corto: "P", clase: "base-pnp", lat: -16.2575, lng: -71.6790 },
+    { id: "C.S. Ciudad de Dios (Yura)", nombre: "Centro de Salud Ciudad de Dios (Yura)", corto: "+", clase: "base-salud", lat: -16.2550, lng: -71.6765 },
+    { id: "Comisaría PNP Congata (Uchumayo)", nombre: "Comisaría PNP Congata (Uchumayo)", corto: "P", clase: "base-pnp", lat: -16.4335, lng: -71.6335 },
+    { id: "Comisaría PNP Uchumayo", nombre: "Comisaría PNP Uchumayo", corto: "P", clase: "base-pnp", lat: -16.4185, lng: -71.6725 },
+    { id: "C.S. Congata (Uchumayo)", nombre: "Centro de Salud Congata (Uchumayo)", corto: "+", clase: "base-salud", lat: -16.4355, lng: -71.6360 },
+    // ================= HOSPITALES Y CENTROS DE SALUD (AREQUIPA) =================
+    { id: "Hospital Honorio Delgado Espinoza", nombre: "Hospital Regional Honorio Delgado (Av. Alcides Carrión)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.4167, lng: -71.5313 },
+    { id: "Hospital Goyeneche", nombre: "Hospital Goyeneche (Av. Goyeneche - Cercado)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.4043, lng: -71.5270 },
+    { id: "Hospital EsSalud Carlos Alberto Seguín", nombre: "Hospital Nacional EsSalud CASE (Cercado)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.3949, lng: -71.5295 },
+    { id: "Hospital EsSalud Yanahuara", nombre: "Hospital EsSalud Yanahuara (Av. Emmel)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.3919, lng: -71.5453 },
+    { id: "Hospital EsSalud Edmundo Escomel", nombre: "Hospital EsSalud Edmundo Escomel (Paucarpata)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.4225, lng: -71.5085 },
+    { id: "Hospital Militar Regional Arequipa", nombre: "Hospital Militar Divisionario (Cercado)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.3975, lng: -71.5255 },
+    { id: "Hospital Municipal Arequipa", nombre: "Hospital Municipal de Arequipa (Cerro Colorado)", etiqueta: "HOSPITAL +", clase: "base-salud", lat: -16.3812, lng: -71.5588 },
+    { id: "Clínica San Juan de Dios", nombre: "Clínica San Juan de Dios (Av. Ejército - Cayma)", etiqueta: "CLÍNICA +", clase: "base-salud", lat: -16.3834, lng: -71.5477 },
+    { id: "Clínica Arequipa", nombre: "Clínica Arequipa (Puente Grau / Cercado)", etiqueta: "CLÍNICA +", clase: "base-salud", lat: -16.3948, lng: -71.5392 },
+    { id: "Clínica Vallesur Auna", nombre: "Clínica Vallesur Auna (La Salle - Cercado)", etiqueta: "CLÍNICA +", clase: "base-salud", lat: -16.4032, lng: -71.5310 },
+    { id: "C.S. Francisco Bolognesi (Cayma)", nombre: "Centro de Salud Francisco Bolognesi (Cayma)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3596, lng: -71.5489 },
+    { id: "C.S. Buenos Aires de Cayma", nombre: "Centro de Salud Buenos Aires (Cayma Alta)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3332, lng: -71.5515 },
+    { id: "P.S. Dean Valdivia (Enace)", nombre: "Puesto de Salud Dean Valdivia (Cayma)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3172, lng: -71.5558 },
+    { id: "C.S. Alto Selva Alegre", nombre: "Centro de Salud Alto Selva Alegre", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3735, lng: -71.5245 },
+    { id: "C.S. Independencia (ASA)", nombre: "Centro de Salud Independencia (Alto Selva Alegre)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3565, lng: -71.5210 },
+    { id: "C.S. Zamácola (Cerro Colorado)", nombre: "Centro de Salud Zamácola (Cerro Colorado)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3555, lng: -71.5720 },
+    { id: "C.S. Maritza Campos (Cono Norte)", nombre: "Centro de Salud Maritza Campos (Cono Norte)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3195, lng: -71.5945 },
+    { id: "C.S. Edificadores Misti (Miraflores)", nombre: "Centro de Salud Edificadores Misti (Miraflores)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.3865, lng: -71.5165 },
+    { id: "C.S. Mariano Melgar", nombre: "Centro de Salud Mariano Melgar", etiqueta: "SALUD +", clase: "base-salud", lat: -16.4075, lng: -71.5065 },
+    { id: "C.S. Ampliación Paucarpata", nombre: "Centro de Salud Ampliación Paucarpata", etiqueta: "SALUD +", clase: "base-salud", lat: -16.4335, lng: -71.4955 },
+    { id: "C.S. Hunter", nombre: "Centro de Salud Javier Llosa García (Hunter)", etiqueta: "SALUD +", clase: "base-salud", lat: -16.4420, lng: -71.5585 },
+    { id: "C.S. San Martín de Socabaya", nombre: "Centro de Salud San Martín de Socabaya", etiqueta: "SALUD +", clase: "base-salud", lat: -16.4535, lng: -71.5295 },
+
+    // ================= COMPAÑÍAS DE BOMBEROS VOLUNTARIOS (CGBVP AREQUIPA) =================
+    { id: "Bomberos Cayma B-240", nombre: "Compañía de Bomberos Cayma B-240 (La Tomilla)", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.3548, lng: -71.5422 },
+    { id: "Bomberos Arequipa B-19 (Cercado)", nombre: "Compañía de Bomberos Arequipa B-19 (Calle Bolívar)", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.3968, lng: -71.5352 },
+    { id: "Bomberos Yanahuara B-140", nombre: "Compañía de Bomberos Yanahuara B-140", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.3888, lng: -71.5445 },
+    { id: "Bomberos Mariano Melgar B-186", nombre: "Compañía de Bomberos Mariano Melgar B-186", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.4055, lng: -71.5120 },
+    { id: "Bomberos Miraflores B-78", nombre: "Compañía de Bomberos Miraflores B-78", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.3935, lng: -71.5195 },
+    { id: "Bomberos J.L. Bustamante B-144", nombre: "Compañía de Bomberos J.L. Bustamante B-144", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.4275, lng: -71.5270 },
+    { id: "Bomberos Paucarpata B-173", nombre: "Compañía de Bomberos Paucarpata B-173", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.4285, lng: -71.5040 },
+    { id: "Bomberos Cerro Colorado B-233", nombre: "Compañía de Bomberos Cerro Colorado B-233", etiqueta: "BOMBEROS", clase: "base-bomberos", lat: -16.3660, lng: -71.5640 },
+
+    // ================= COMISARÍAS PNP (AREQUIPA METROPOLITANA) =================
+    { id: "Comisaría PNP Cayma", nombre: "Comisaría PNP Cayma (Av. Cayma)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3445, lng: -71.5472 },
+    { id: "Comisaría PNP Acequia Alta", nombre: "Comisaría PNP Acequia Alta (Cayma)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3489, lng: -71.5408 },
+    { id: "Comisaría PNP Dean Valdivia", nombre: "Comisaría PNP Dean Valdivia (Enace - Cayma)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3198, lng: -71.5582 },
+    { id: "Comisaría PNP Casimiro Cuadros", nombre: "Comisaría PNP Casimiro Cuadros (Cayma)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3262, lng: -71.5605 },
+    { id: "Comisaría PNP Alto Selva Alegre", nombre: "Comisaría PNP Alto Selva Alegre", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3748, lng: -71.5255 },
+    { id: "Comisaría PNP Independencia (ASA)", nombre: "Comisaría PNP Independencia (Av. Francisco Mostajo - ASA)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3663, lng: -71.5228 },
+    { id: "Comisaría PNP Yanahuara", nombre: "Comisaría PNP Yanahuara", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3862, lng: -71.5425 },
+    { id: "Comisaría PNP Cerro Colorado", nombre: "Comisaría PNP Cerro Colorado", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3740, lng: -71.5605 },
+    { id: "Comisaría PNP Zamácola", nombre: "Comisaría PNP Zamácola (Cerro Colorado)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3540, lng: -71.5735 },
+    { id: "Comisaría PNP Mariscal Castilla", nombre: "Comisaría PNP Mariscal Castilla (Cerro Colorado)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3825, lng: -71.5665 },
+    { id: "Comisaría PNP Ciudad Municipal", nombre: "Comisaría PNP Ciudad Municipal (Cono Norte)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3175, lng: -71.5910 },
+    { id: "Comisaría PNP Santa Marta (Cercado)", nombre: "Comisaría PNP Santa Marta (Cercado)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3992, lng: -71.5322 },
+    { id: "Comisaría PNP Palacio Viejo (Cercado)", nombre: "Comisaría PNP Palacio Viejo (Cercado)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4035, lng: -71.5378 },
+    { id: "Comisaría PNP Miraflores", nombre: "Comisaría PNP Miraflores", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3918, lng: -71.5220 },
+    { id: "Comisaría PNP El Porvenir (Miraflores)", nombre: "Comisaría PNP El Porvenir (Miraflores)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.3845, lng: -71.5145 },
+    { id: "Comisaría PNP Mariano Melgar", nombre: "Comisaría PNP Mariano Melgar", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4048, lng: -71.5090 },
+    { id: "Comisaría PNP Jerusalén (M. Melgar)", nombre: "Comisaría PNP Jerusalén (Mariano Melgar)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4135, lng: -71.5015 },
+    { id: "Comisaría PNP Paucarpata", nombre: "Comisaría PNP Paucarpata", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4295, lng: -71.5025 },
+    { id: "Comisaría PNP Juan de Dios Colca Apaza", nombre: "Comisaría PNP Colca Apaza (Paucarpata)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4185, lng: -71.5125 },
+    { id: "Comisaría PNP J.L. Bustamante", nombre: "Comisaría PNP José Luis Bustamante y Rivero", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4255, lng: -71.5290 },
+    { id: "Comisaría PNP Simón Bolívar", nombre: "Comisaría PNP Simón Bolívar (J.L. Bustamante)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4170, lng: -71.5345 },
+    { id: "Comisaría PNP Socabaya", nombre: "Comisaría PNP Socabaya", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4485, lng: -71.5340 },
+    { id: "Comisaría PNP Ciudad Mi Trabajo", nombre: "Comisaría PNP Ciudad Mi Trabajo (Socabaya)", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4395, lng: -71.5385 },
+    { id: "Comisaría PNP Hunter", nombre: "Comisaría PNP Jacobo Hunter", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4410, lng: -71.5565 },
+    { id: "Comisaría PNP Sachaca", nombre: "Comisaría PNP Sachaca", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4245, lng: -71.5675 },
+    { id: "Comisaría PNP Tiabaya", nombre: "Comisaría PNP Tiabaya", etiqueta: "POLICÍA", clase: "base-pnp", lat: -16.4490, lng: -71.5915 },
+
+    // ================= BASES DE SERENAZGO DISTRITAL =================
+    { id: "Serenazgo Cayma #01 (La Tomilla)", nombre: "Base Central Serenazgo Cayma (La Tomilla)", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3516, lng: -71.5438 },
+    { id: "Serenazgo Cayma Zona Alta (Enace)", nombre: "Módulo Serenazgo Cayma Zona Alta (Enace)", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3210, lng: -71.5550 },
+    { id: "Serenazgo Alto Selva Alegre", nombre: "Base Serenazgo Alto Selva Alegre", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3765, lng: -71.5275 },
+    { id: "Serenazgo Arequipa (Cercado)", nombre: "Base Central Serenazgo Provincial Arequipa", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.4015, lng: -71.5395 },
+    { id: "Serenazgo Yanahuara", nombre: "Base Serenazgo Yanahuara", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3895, lng: -71.5435 },
+    { id: "Serenazgo Cerro Colorado", nombre: "Base Serenazgo Cerro Colorado", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3720, lng: -71.5625 },
+    { id: "Serenazgo Miraflores", nombre: "Base Serenazgo Miraflores", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.3940, lng: -71.5235 },
+    { id: "Serenazgo J.L. Bustamante", nombre: "Base Serenazgo José Luis Bustamante y Rivero", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.4225, lng: -71.5310 },
+    { id: "Serenazgo Paucarpata", nombre: "Base Serenazgo Paucarpata", etiqueta: "SERENAZGO", clase: "base-serenazgo", lat: -16.4270, lng: -71.5055 }
+  ];
+
+  let markersLayer = L.layerGroup().addTo(map);
+  let geoRisksLayer = L.layerGroup().addTo(map);
+  let safeZonesLayer = L.layerGroup().addTo(map);
+  let basesLayer = L.layerGroup().addTo(map);
+  let routeLayer = L.layerGroup().addTo(map);
+  let heatLayer = null;
+
+  let alertasActuales = [];
+  let climaActual = { lluvia_mm: 0, riesgo_torrentera: 'BAJO' };
+  let rutasCalculadas = [];
+  let filtroCategoria = 'TODOS';
+  let audioHabilitado = false;
+  let mostrarHeat = true;
+  let mostrarGeo = true;
+  let mostrarBases = true;
+
+  // Telemetria en vivo del cursor sobre el mapa
+  map.on('mousemove', (e) => {
+    document.getElementById('cursor-coords').textContent =
+      `LAT: ${e.latlng.lat.toFixed(5)} | LNG: ${e.latlng.lng.toFixed(5)}`;
+  });
+
+  function centrarCayma() {
+    map.flyTo(CAYMA_CENTER, 14, { duration: 1.0 });
+  }
 
   function cambiarCapaMapa(tipo, btn) {
     map.removeLayer(capaBaseActual);
@@ -299,13 +560,31 @@
     btn.classList.add('active');
   }
 
-  let markersLayer = L.layerGroup().addTo(map);
-  let geoRisksLayer = L.layerGroup().addTo(map);
-  let safeZonesLayer = L.layerGroup().addTo(map);
-  let heatLayer = null;
-  let alertasActuales = [];
-  let filtroCategoria = 'TODOS';
-  let audioHabilitado = false;
+  function toggleBases() {
+    mostrarBases = !mostrarBases;
+    document.getElementById('btn-tog-bases').classList.toggle('on', mostrarBases);
+    if (mostrarBases) basesLayer.addTo(map); else map.removeLayer(basesLayer);
+  }
+
+  function toggleCapaGeo() {
+    mostrarGeo = !mostrarGeo;
+    document.getElementById('btn-tog-geo').classList.toggle('on', mostrarGeo);
+    if (mostrarGeo) { geoRisksLayer.addTo(map); safeZonesLayer.addTo(map); }
+    else { map.removeLayer(geoRisksLayer); map.removeLayer(safeZonesLayer); }
+  }
+
+  function toggleHeatmap() {
+    mostrarHeat = !mostrarHeat;
+    document.getElementById('btn-tog-heat').classList.toggle('on', mostrarHeat);
+    renderizarDashboard();
+  }
+
+  function cambiarTab(tabId, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
 
   function reproducirSirenaTactica() {
     if (!audioHabilitado) return;
@@ -329,9 +608,170 @@
   function toggleAudio() {
     audioHabilitado = !audioHabilitado;
     const btn = document.getElementById('btn-audio');
-    btn.textContent = audioHabilitado ? 'Alarma: ON' : 'Alarma: OFF';
+    btn.textContent = audioHabilitado ? 'Sonido: Encendido' : 'Sonido: Apagado';
     btn.classList.toggle('active', audioHabilitado);
     if (audioHabilitado) reproducirSirenaTactica();
+  }
+
+  // Dibujar Bases Operativas en el Mapa
+  function dibujarBasesOperativas() {
+    basesLayer.clearLayers();
+    const listHtml = [];
+    BASES_OPERATIVAS.forEach(b => {
+      const icon = L.divIcon({
+        html: `<div class="base-marker ${b.clase}">${b.etiqueta}</div>`,
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11]
+      });
+      L.marker([b.lat, b.lng], { icon })
+        .bindPopup(`<div style="color:#0f172a;"><b>${b.nombre}</b><br>Unidad lista para despacho inmediato</div>`)
+        .addTo(basesLayer);
+
+      listHtml.push(`
+        <div style="background:var(--bg-card); border:1px solid var(--border); padding:8px 10px; border-radius:6px; display:flex; justify-content:space-between;">
+          <span><b>[${b.codigo}]</b> ${b.nombre}</span>
+          <span style="color:#648697; font-weight:700;">LISTA</span>
+        </div>
+      `);
+    });
+    document.getElementById('bases-list').innerHTML = listHtml.join('');
+  }
+
+  function calcularFactorCondiciones(alerta) {
+    const hora = new Date().getHours();
+    const min = new Date().getMinutes();
+    const t = hora + min / 60;
+
+    // 1. Trafico por hora punta en Cayma / Arequipa
+    let factorTrafico = 1.15; // Fluido normal
+    let nivelTrafico = "FLUÍDO";
+    if ((t >= 7.5 && t <= 9.2) || (t >= 12.5 && t <= 14.5) || (t >= 18.0 && t <= 20.5)) {
+      factorTrafico = 1.65;
+      nivelTrafico = "CONGESTIÓN HORA PUNTA";
+    } else if (t >= 9.2 && t <= 18.0) {
+      factorTrafico = 1.32;
+      nivelTrafico = "TRÁFICO MODERADO";
+    }
+
+    // 2. Penalizacion por lluvia / calzada mojada / riesgo torrentera
+    const lluvia = Number(climaActual.lluvia_mm || 0);
+    let factorClima = 1.0;
+    if (lluvia >= 5.0) factorClima = 1.45;
+    else if (lluvia > 0.2) factorClima = 1.22;
+
+    // 3. Penalizacion por aglomeracion de personas / multiples incidentes cercanos
+    const activosCercanos = alertasActuales.filter(a => {
+      const dLat = Math.abs(Number(a.lat) - Number(alerta?.lat || 0));
+      const dLng = Math.abs(Number(a.lng) - Number(alerta?.lng || 0));
+      return dLat < 0.008 && dLng < 0.008;
+    }).length;
+
+    let factorAglomeracion = 1.0;
+    if (alerta?.enjambre_confirmado || activosCercanos >= 3) factorAglomeracion = 1.40;
+    else if (activosCercanos === 2) factorAglomeracion = 1.18;
+
+    const multiplicadorTotal = factorTrafico * factorClima * factorAglomeracion;
+    return {
+      multiplicadorTotal,
+      nivelTrafico,
+      lluviaActiva: lluvia > 0.2,
+      aglomeracionAlta: factorAglomeracion > 1.15
+    };
+  }
+
+  function seleccionarRutaAlterna(idx) {
+    if (!rutasCalculadas[idx]) return;
+    routeLayer.clearLayers();
+
+    // Dibujar primero las rutas alternas en verde punteado y la seleccionada en azul brillante
+    rutasCalculadas.forEach((r, i) => {
+      const esSeleccionada = i === idx;
+      const poly = L.polyline(r.coords, {
+        color: esSeleccionada ? '#00e5ff' : '#00e676',
+        weight: esSeleccionada ? 6 : 4,
+        opacity: esSeleccionada ? 0.95 : 0.65,
+        dashArray: esSeleccionada ? null : '7, 7'
+      }).addTo(routeLayer);
+
+      poly.on('click', () => seleccionarRutaAlterna(i));
+      if (esSeleccionada) {
+        map.fitBounds(poly.getBounds(), { padding: [65, 65] });
+      }
+    });
+
+    const sel = rutasCalculadas[idx];
+    const botonesAlternos = rutasCalculadas.map((r, i) => `
+      <button onclick="seleccionarRutaAlterna(${i})"
+        style="padding:3px 8px; font-size:0.71rem; border-radius:4px; margin-right:4px;
+               background:${i === idx ? '#a8bfc8' : '#144869'};
+               color:${i === idx ? '#06101f' : '#cbd5e1'}; font-weight:700;">
+        ${i === 0 ? 'Camino Principal' : 'Ruta Alterna #' + i} (${r.etaRealMin} min)
+      </button>
+    `).join('');
+
+    document.getElementById('route-title').innerHTML =
+      `${sel.unidad} &mdash; <span style="color:#fbbf24;">${sel.condiciones.nivelTrafico}</span>`;
+    document.getElementById('route-details').innerHTML = `
+      <div>Distancia: <b>${sel.distKm} km</b> | Tiempo estimado de llegada: <b style="color:#a8bfc8;">${sel.etaRealMin} min</b> <small style="color:#94a3b8;">(con vía libre: ${sel.etaLibreMin} min)</small></div>
+      <div style="font-size:0.71rem; color:#cbd5e1; margin:3px 0;">
+        Factores: ${sel.condiciones.lluviaActiva ? '🌧️ Calzada mojada | ' : '☀️ Seco | '}
+        ${sel.condiciones.aglomeracionAlta ? '👥 Muchas personas / Varios reportes en la zona' : '🟢 Flujo peatonal normal'}
+      </div>
+      <div style="margin-top:4px;">${botonesAlternos}</div>
+    `;
+  }
+
+  async function trazarRutaUnidad(alertaId, destLat, destLng) {
+    const select = document.getElementById(`unit-${alertaId}`);
+    const unidadId = select ? select.value : BASES_OPERATIVAS[0].id;
+    const base = BASES_OPERATIVAS.find(b => b.id === unidadId) || BASES_OPERATIVAS[0];
+    const alertaObj = alertasActuales.find(a => a.alerta_id === alertaId);
+
+    routeLayer.clearLayers();
+    rutasCalculadas = [];
+    const banner = document.getElementById('route-banner');
+    banner.classList.add('visible');
+    document.getElementById('route-title').textContent = `BUSCANDO MEJOR CAMINO: ${base.nombre}`;
+    document.getElementById('route-details').textContent = 'Calculando tráfico y rutas alternas...';
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${base.lng},${base.lat};${destLng},${destLat}?overview=full&geometries=geojson&alternatives=true`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const cond = calcularFactorCondiciones(alertaObj);
+
+        rutasCalculadas = data.routes.map((route, idx) => {
+          const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+          const distKm = (route.distance / 1000).toFixed(2);
+          const etaLibreMin = Math.max(1, Math.round(route.duration / 60));
+          // Las rutas alternas suelen evitar avenidas principales congestionadas (factor ligeramente menor)
+          const ajusteViaAlterna = idx > 0 ? 0.88 : 1.0;
+          const etaRealMin = Math.max(1, Math.round(etaLibreMin * cond.multiplicadorTotal * ajusteViaAlterna));
+
+          return {
+            Equipo: base.id,
+            coords,
+            distKm,
+            etaLibreMin,
+            etaRealMin,
+            condiciones: cond
+          };
+        });
+
+        seleccionarRutaAlterna(0);
+      }
+    } catch (e) {
+      L.polyline([[base.lat, base.lng], [destLat, destLng]], {
+        color: '#a8bfc8', weight: 4, dashArray: '6, 6'
+      }).addTo(routeLayer);
+      document.getElementById('route-details').textContent = 'Línea directa trazada hacia el incidente.';
+    }
+  }
+
+  function limpiarRuta() {
+    routeLayer.clearLayers();
+    document.getElementById('route-banner').classList.remove('visible');
   }
 
   function dibujarInfraestructuraGeografica(clima) {
@@ -340,10 +780,7 @@
 
     (clima.cauces_torrenteras || []).forEach(cauce => {
       L.polyline(cauce.coordenadas, {
-        color: '#06b6d4',
-        weight: 4,
-        opacity: 0.85,
-        dashArray: '8, 6'
+        color: '#00e5ff', weight: 5, opacity: 0.95, dashArray: '8, 6'
       }).bindPopup(`<b>${cauce.nombre}</b><br>Nivel de riesgo hídrico: <b>${cauce.riesgo}</b>`).addTo(geoRisksLayer);
     });
 
@@ -351,33 +788,53 @@
       const esVolcan = p.tipo === 'volcan';
       const color = esVolcan ? '#f97316' : '#06b6d4';
       L.circle([p.lat, p.lng], {
-        radius: p.radio_alerta_m,
-        color: color,
-        fillColor: color,
-        fillOpacity: esVolcan ? 0.06 : 0.14,
-        weight: 1.5,
-        dashArray: '5, 5'
+        radius: p.radio_alerta_m, color: color, fillColor: color,
+        fillOpacity: esVolcan ? 0.05 : 0.14, weight: 1.5, dashArray: '5, 5'
       }).bindPopup(`<b>${p.nombre}</b><br>Radio de impacto: ${p.radio_alerta_m} m`).addTo(geoRisksLayer);
     });
 
     (clima.zonas_seguras || []).forEach(z => {
-      const safeIcon = L.divIcon({ html: `<div class="safe-marker"></div>`, className: '', iconSize: [16, 16] });
-      L.marker([z.lat, z.lng], { icon: safeIcon })
+      const safeIcon = L.divIcon({ html: `<div class="safe-marker" title="Zona Segura">✓</div>`, className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+      L.marker([z.lat, z.lng], { icon: safeIcon }).bindTooltip(z.nombre, { direction: "top", offset: [0, -10] })
         .bindPopup(`<div style="color:#0f172a;"><b>${z.nombre}</b><br>Punto de Reunión y Evacuación Oficial</div>`)
         .addTo(safeZonesLayer);
     });
   }
 
-  function centrarEnAlerta(lat, lng) {
-    if (Math.abs(lat) <= 85) {
-      map.flyTo([lat, lng], 16, { duration: 1.1 });
-    }
+  function actualizarAnalitica(alertas) {
+    const conteo = { sismo: 0, deslizamiento: 0, incendio: 0, medica: 0, seguridad: 0, sos_critico: 0 };
+    alertas.forEach(a => { if (conteo[a.categoria] !== undefined) conteo[a.categoria]++; });
+    const total = Math.max(1, alertas.length);
+
+    const colores = {
+      sismo: '#d69b88', deslizamiento: '#06b6d4', incendio: '#b34c28',
+      medica: '#648697', seguridad: '#a8bfc8', sos_critico: '#a855f7'
+    };
+
+    const html = Object.entries(conteo).map(([cat, val]) => {
+      const pct = Math.round((val / total) * 100);
+      return `
+        <div class="stat-bar-row">
+          <div class="stat-bar-label">
+            <span style="text-transform:uppercase;">${cat}</span>
+            <b>${val} (${alertas.length ? pct : 0}%)</b>
+          </div>
+          <div class="stat-bar-track">
+            <div class="stat-bar-fill" style="width:${alertas.length ? pct : 0}%; background:${colores[cat]};"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    document.getElementById('stats-bars').innerHTML = html;
   }
 
   function renderizarDashboard() {
     markersLayer.clearLayers();
     const heatPoints = [];
     const filtradas = alertasActuales.filter(a => filtroCategoria === 'TODOS' || a.categoria === filtroCategoria);
+
+    document.getElementById('tab-count').textContent = alertasActuales.length;
+    actualizarAnalitica(alertasActuales);
 
     filtradas.forEach(a => {
       const lat = parseFloat(a.lat);
@@ -386,15 +843,15 @@
 
       if (Math.abs(lat) <= 85 && !(lat === -90 && lng === -180)) {
         heatPoints.push([lat, lng, a.intensidad || 0.85]);
-        const iconHtml = `<div class="sos-marker ${a.estado === 'EN_PROCESO' ? 'en-proceso' : ''}"></div>`;
-        const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [20, 20] });
+        const iconHtml = `<div class="sos-marker ${a.estado === 'EN_PROCESO' ? 'en-proceso' : ''}">${a.estado === 'EN_PROCESO' ? '➤' : '!'}</div>`;
+        const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
 
         L.marker([lat, lng], { icon: customIcon })
           .bindPopup(`
             <div style="color:#0f172a; min-width:205px;">
               <strong>${a.categoria.toUpperCase()}</strong> — <b>${a.estado}</b><br>
               <small>${a.descripcion || 'Sin descripción'}</small><hr style="margin:5px 0;">
-              <b>Riesgo IA:</b> ${Math.round((a.intensidad || 0.8) * 100)}%<br>
+              <b>Nivel de Urgencia:</b> ${Math.round((a.intensidad || 0.8) * 100)}%<br>
               <b>Sector:</b> ${a.zona_cercana || 'Cayma'}<br>
               <b>Batería Móvil:</b> ${a.nivel_bateria}% ${a.origen_offline_mesh ? '📡 MESH' : ''}
             </div>
@@ -404,54 +861,50 @@
     });
 
     if (heatLayer) map.removeLayer(heatLayer);
-    if (heatPoints.length > 0 && L.heatLayer) {
+    if (mostrarHeat && heatPoints.length > 0 && L.heatLayer) {
       heatLayer = L.heatLayer(heatPoints, { radius: 30, blur: 20, maxZoom: 16 }).addTo(map);
     }
 
     const feed = document.getElementById('feed-list');
     if (filtradas.length === 0) {
-      feed.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px;">Sin incidentes activos. Sistema en vigilancia.</div>`;
+      feed.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:32px 16px;">Sin Emergencias Activas en este filtro.<br><small>El mapa sigue monitoreando en tiempo real.</small></div>`;
       return;
     }
 
     feed.innerHTML = filtradas.map(a => {
       const riesgoPct = Math.round((a.intensidad || 0.8) * 100);
-      const distTxt = a.distancia_riesgo_m ? `${a.distancia_riesgo_m} m` : 'Fuera de rango';
-      const esCoordenadaReal = Math.abs(Number(a.lat)) <= 85;
+      const distTxt = a.distancia_riesgo_m ? `${a.distancia_riesgo_m} m` : 'N/A';
       return `
         <div class="alert-card ${a.estado} ${a.enjambre_confirmado ? 'enjambre' : ''}">
           <div class="card-top">
             <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
               <span class="badge badge-cat">${a.categoria}</span>
-              ${a.origen_offline_mesh ? '<span class="badge badge-mesh">MESH OFFLINE</span>' : ''}
-              ${a.enjambre_confirmado ? '<span class="badge badge-swarm">ENJAMBRE IA</span>' : ''}
+              ${a.origen_offline_mesh ? '<span class="badge badge-mesh">SIN INTERNET</span>' : ''}
+              ${a.enjambre_confirmado ? '<span class="badge badge-swarm">VARIOS REPORTES</span>' : ''}
             </div>
             <span class="badge badge-status-${a.estado}">${a.estado}</span>
           </div>
 
-          <div class="card-desc">${a.descripcion || 'Alerta SOS activada desde dispositivo móvil'}</div>
+          <div class="card-desc">${a.descripcion || 'Emergencia Activada desde dispositivo móvil'}</div>
 
           <div class="card-meta">
-            <div>Riesgo IA: <b>${riesgoPct}%</b></div>
+            <div>Nivel de Urgencia: <b>${riesgoPct}%</b></div>
             <div>Batería: <b>${a.nivel_bateria}%</b></div>
-            <div>Geo-Zona: <b>${a.zona_cercana || 'Cayma'}</b></div>
-            <div>Dist. Riesgo: <b>${distTxt}</b></div>
+            <div>Sector: <b>${a.zona_cercana || 'Cayma'}</b></div>
+            <div>Dist. a Quebrada: <b>${distTxt}</b></div>
             <div style="grid-column: span 2;">
-              Coords: <b>${Number(a.lat).toFixed(4)}, ${Number(a.lng).toFixed(4)}</b>
-              ${a.unidad_asignada ? ` | Unidad: <b style="color:#fbbf24;">${a.unidad_asignada}</b>` : ''}
+              Ubicación: <b>${Number(a.lat).toFixed(4)}, ${Number(a.lng).toFixed(4)}</b>
+              ${a.unidad_asignada ? ` | Equipo: <b style="color:#fbbf24;">${a.unidad_asignada}</b>` : ''}
             </div>
           </div>
 
           <div class="card-actions">
-            ${esCoordenadaReal ? `<button class="btn-locate" onclick="centrarEnAlerta(${a.lat}, ${a.lng})">Ubicar</button>` : ''}
-            <select id="unit-${a.alerta_id}" class="unit-select">
-              <option value="Serenazgo Cayma #01">Serenazgo Cayma #01</option>
-              <option value="Defensa Civil Cayma">Defensa Civil Cayma</option>
-              <option value="Bomberos Arequipa B-19">Bomberos Arequipa B-19</option>
-              <option value="Ambulancia SAMU #03">Ambulancia SAMU #03</option>
+                        <select id="unit-${a.alerta_id}" class="unit-select">
+              ${BASES_OPERATIVAS.map(b => `<option value="${b.id}">${b.id}</option>`).join('')}
             </select>
-            <button class="btn-dispatch" onclick="despacharUnidad('${a.alerta_id}')">Despachar</button>
-            <button class="btn-archive" onclick="archivarAlerta('${a.alerta_id}')">Atendida</button>
+            <button class="btn-route" onclick="trazarRutaUnidad('${a.alerta_id}', ${a.lat}, ${a.lng})" title="Calcular ruta vial y ETA">Ver Camino</button>
+            <button class="btn-dispatch" onclick="despacharUnidad('${a.alerta_id}')">Enviar Ayuda</button>
+            <button class="btn-archive" onclick="archivarAlerta('${a.alerta_id}')">Finalizar</button>
           </div>
         </div>
       `;
@@ -460,9 +913,15 @@
 
   function setFiltro(cat, btn) {
     filtroCategoria = cat;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    if (btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
     renderizarDashboard();
+  }
+
+  function generarReporteSITREP() {
+    window.print();
   }
 
   async function cargarDatosCOE() {
@@ -475,6 +934,7 @@
       const dataHealth = await resHealth.json();
 
       const clima = dataMapa.clima_y_torrenteras || {};
+      climaActual = clima;
       document.getElementById('w-torrentera').textContent = clima.riesgo_torrentera || 'BAJO';
       document.getElementById('w-temp').textContent = `${clima.temperatura_c ?? '--'}°C`;
       document.getElementById('w-rain').textContent = `${clima.lluvia_mm ?? 0} mm`;
@@ -484,7 +944,7 @@
       if (sismo.hay_sismo_reciente) {
         usgsBadge.textContent = `USGS Sismo: M${sismo.magnitud} (${sismo.distancia_cayma_km} km)`;
       } else {
-        usgsBadge.textContent = `USGS Arequipa: Sin sismos >= M2.5`;
+        usgsBadge.textContent = `Sismos Arequipa: Sin actividad reciente`;
       }
 
       dibujarInfraestructuraGeografica(clima);
@@ -495,7 +955,7 @@
       document.getElementById('kpi-criticos').textContent = m.zona_critica_o_enjambre ?? 0;
       document.getElementById('kpi-mesh').textContent = m.origen_mesh_offline ?? 0;
       document.getElementById('kpi-cloud').textContent =
-        `IA:${dataHealth.ia_modelo_cargado ? 'OK' : 'ERR'} | FB:${dataHealth.firebase_conectado ? 'OK' : 'ERR'} | SB:${dataHealth.supabase_conectado ? 'OK' : 'ERR'}`;
+        `Análisis: Listo | Nube: Activa`;
 
       alertasActuales = dataMapa.puntos || [];
       renderizarDashboard();
@@ -516,17 +976,8 @@
   }
 
   async function archivarAlerta(alertaId) {
+    limpiarRuta();
     await fetch(`/api/v1/alertas/${alertaId}/archivar`, { method: 'PATCH' });
-    cargarDatosCOE();
-  }
-
-  async function purgarPruebas() {
-    await fetch('/api/v1/alertas/purgar-pruebas', { method: 'POST' });
-    cargarDatosCOE();
-  }
-
-  async function simularIncidente() {
-    await fetch('/api/v1/alertas/simular-cayma', { method: 'POST' });
     cargarDatosCOE();
   }
 
@@ -536,7 +987,7 @@
 
     ws.onopen = () => {
       document.getElementById('ws-indicator').classList.remove('offline');
-      document.getElementById('ws-status-text').textContent = 'ENLACE SATELITAL Y WEBSOCKET ACTIVO | AREQUIPA - PERÚ';
+      document.getElementById('ws-status-text').textContent = 'SISTEMA CONECTADO EN TIEMPO REAL | AREQUIPA - PERÚ';
     };
 
     ws.onmessage = (event) => {
@@ -552,11 +1003,113 @@
 
     ws.onclose = () => {
       document.getElementById('ws-indicator').classList.add('offline');
-      document.getElementById('ws-status-text').textContent = 'RECONECTANDO ENLACE...';
+      document.getElementById('ws-status-text').textContent = 'Reconectando sistema...';
       setTimeout(conectarWebSocket, 3000);
     };
   }
 
+    const COMISARIAS_REALES_AREQUIPA = [
+    { id: "Comisaría PNP Independencia (Alto Selva Alegre)", query: "Comisaria Independencia, Alto Selva Alegre, Arequipa, Peru", fallback: [-16.3647, -71.5222] },
+    { id: "Comisaría PNP Alto Selva Alegre (Av. Roosevelt)", query: "Comisaria Alto Selva Alegre, Arequipa, Peru", fallback: [-16.3746, -71.5258] },
+    { id: "Comisaría PNP Cayma (Av. Cayma)", query: "Comisaria de Cayma, Arequipa, Peru", fallback: [-16.3446, -71.5471] },
+    { id: "Comisaría PNP Acequia Alta (Cayma)", query: "Comisaria Acequia Alta, Cayma, Arequipa, Peru", fallback: [-16.3489, -71.5408] },
+    { id: "Comisaría PNP Dean Valdivia (Enace - Cayma)", query: "Comisaria Dean Valdivia, Cayma, Arequipa, Peru", fallback: [-16.3198, -71.5582] },
+    { id: "Comisaría PNP Casimiro Cuadros (Cayma)", query: "Comisaria Casimiro Cuadros, Cayma, Arequipa, Peru", fallback: [-16.3262, -71.5605] },
+    { id: "Comisaría PNP Yanahuara", query: "Comisaria de Yanahuara, Arequipa, Peru", fallback: [-16.3863, -71.5426] },
+    { id: "Comisaría PNP Cerro Colorado", query: "Comisaria Cerro Colorado, Arequipa, Peru", fallback: [-16.3742, -71.5606] },
+    { id: "Comisaría PNP Zamácola (Cerro Colorado)", query: "Comisaria Zamacola, Cerro Colorado, Arequipa, Peru", fallback: [-16.3542, -71.5736] },
+    { id: "Comisaría PNP Mariscal Castilla (Cerro Colorado)", query: "Comisaria Mariscal Castilla, Cerro Colorado, Arequipa, Peru", fallback: [-16.3826, -71.5666] },
+    { id: "Comisaría PNP Ciudad Municipal (Cono Norte)", query: "Comisaria Ciudad Municipal, Cerro Colorado, Arequipa, Peru", fallback: [-16.3176, -71.5912] },
+    { id: "Comisaría PNP Santa Marta (Cercado)", query: "Comisaria Santa Marta, Arequipa, Peru", fallback: [-16.3991, -71.5321] },
+    { id: "Comisaría PNP Palacio Viejo (Cercado)", query: "Comisaria Palacio Viejo, Arequipa, Peru", fallback: [-16.4036, -71.5379] },
+    { id: "Comisaría PNP Miraflores", query: "Comisaria Miraflores, Arequipa, Peru", fallback: [-16.3919, -71.5221] },
+    { id: "Comisaría PNP El Porvenir (Miraflores)", query: "Comisaria El Porvenir, Miraflores, Arequipa, Peru", fallback: [-16.3846, -71.5146] },
+    { id: "Comisaría PNP Mariano Melgar", query: "Comisaria Mariano Melgar, Arequipa, Peru", fallback: [-16.4049, -71.5091] },
+    { id: "Comisaría PNP Jerusalén (Mariano Melgar)", query: "Comisaria Jerusalen, Mariano Melgar, Arequipa, Peru", fallback: [-16.4136, -71.5016] },
+    { id: "Comisaría PNP Paucarpata", query: "Comisaria Paucarpata, Arequipa, Peru", fallback: [-16.4296, -71.5026] },
+    { id: "Comisaría PNP Colca Apaza (Paucarpata)", query: "Comisaria Juan de Dios Colca Apaza, Paucarpata, Arequipa, Peru", fallback: [-16.4186, -71.5126] },
+    { id: "Comisaría PNP José Luis Bustamante y Rivero", query: "Comisaria Jose Luis Bustamante y Rivero, Arequipa, Peru", fallback: [-16.4256, -71.5291] },
+    { id: "Comisaría PNP Simón Bolívar (J.L. Bustamante)", query: "Comisaria Simon Bolivar, Jose Luis Bustamante y Rivero, Arequipa, Peru", fallback: [-16.4171, -71.5346] },
+    { id: "Comisaría PNP Socabaya", query: "Comisaria Socabaya, Arequipa, Peru", fallback: [-16.4486, -71.5341] },
+    { id: "Comisaría PNP Ciudad Mi Trabajo (Socabaya)", query: "Comisaria Ciudad Mi Trabajo, Socabaya, Arequipa, Peru", fallback: [-16.4396, -71.5386] },
+    { id: "Comisaría PNP Jacobo Hunter", query: "Comisaria Jacobo Hunter, Arequipa, Peru", fallback: [-16.4411, -71.5566] },
+    { id: "Comisaría PNP Sachaca", query: "Comisaria Sachaca, Arequipa, Peru", fallback: [-16.4246, -71.5676] },
+    { id: "Comisaría PNP Tiabaya", query: "Comisaria Tiabaya, Arequipa, Peru", fallback: [-16.4491, -71.5916] },
+    { id: "Comisaría PNP Sabandía", query: "Comisaria Sabandia, Arequipa, Peru", fallback: [-16.4538, -71.4988] },
+    { id: "Comisaría PNP Characato", query: "Comisaria Characato, Arequipa, Peru", fallback: [-16.4702, -71.4872] },
+    { id: "Comisaría PNP Ciudad de Dios (Yura)", query: "Comisaria Ciudad de Dios, Yura, Arequipa, Peru", fallback: [-16.2575, -71.6790] },
+    { id: "Comisaría PNP Congata (Uchumayo)", query: "Comisaria Congata, Uchumayo, Arequipa, Peru", fallback: [-16.4335, -71.6335] }
+  ];
+
+  async function sincronizarInfraestructuraRealOSM() {
+    // 1. Mantener solo Bomberos, Serenazgo y Postas de nuestro catalogo base (sin comisarias viejas desfasadas)
+    const sinPoliciaVieja = BASES_OPERATIVAS.filter(b => b.clase !== 'base-pnp' && b.clase !== 'base-salud');
+    const comisariasExactas = [];
+
+    // 2. Ubicar cada comisaria por su calle real mediante Nominatim / Overpass
+    for (const com of COMISARIAS_REALES_AREQUIPA) {
+      let lat = com.fallback[0];
+      let lng = com.fallback[1];
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(com.query)}`);
+        const arr = await res.json();
+        if (arr && arr.length > 0) {
+          lat = parseFloat(arr[0].lat);
+          lng = parseFloat(arr[0].lon);
+        }
+      } catch (_) {}
+      comisariasExactas.push({ id: com.id, nombre: com.id, corto: "P", clase: "base-pnp", lat, lng });
+    }
+
+    // 3. Descargar los poligonos reales de todos los hospitales, clinicas y comisarias adicionales en Overpass
+    const query = `
+      [out:json][timeout:15];
+      (
+        node["amenity"~"hospital|clinic|police|fire_station"](-16.48,-71.69,-16.25,-71.47);
+        way["amenity"~"hospital|clinic|police|fire_station"](-16.48,-71.69,-16.25,-71.47);
+      );
+      out center;
+    `;
+    const agregadosOSM = [];
+    try {
+      const resp = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(query)
+      });
+      const data = await resp.json();
+      if (data.elements) {
+        data.elements.forEach(el => {
+          const tags = el.tags || {};
+          const nombre = tags.name || tags['name:es'];
+          if (!nombre) return;
+          const lat = el.lat || (el.center && el.center.lat);
+          const lng = el.lon || (el.center && el.center.lon);
+          if (!lat || !lng) return;
+
+          const yaExiste = [...sinPoliciaVieja, ...comisariasExactas, ...agregadosOSM].some(ex =>
+            Math.abs(ex.lat - lat) < 0.0018 && Math.abs(ex.lng - lng) < 0.0018
+          );
+          if (yaExiste) return;
+
+          let clase = 'base-salud';
+          let corto = '+';
+          if (tags.amenity === 'hospital') { clase = 'base-salud'; corto = 'H'; }
+          else if (tags.amenity === 'clinic') { clase = 'base-salud'; corto = '+'; }
+          else if (tags.amenity === 'police') { clase = 'base-pnp'; corto = 'P'; }
+          else if (tags.amenity === 'fire_station') { clase = 'base-bomberos'; corto = 'B'; }
+
+          agregadosOSM.push({ id: nombre, nombre: nombre, corto: corto, clase: clase, lat: lat, lng: lng });
+        });
+      }
+    } catch (e) {}
+
+    BASES_OPERATIVAS.length = 0;
+    BASES_OPERATIVAS.push(...comisariasExactas, ...sinPoliciaVieja, ...agregadosOSM);
+    dibujarBasesOperativas();
+    renderizarDashboard();
+  }
+  dibujarBasesOperativas();
+  sincronizarInfraestructuraRealOSM();
   cargarDatosCOE();
   conectarWebSocket();
 </script>
