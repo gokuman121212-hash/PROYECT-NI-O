@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#070B14"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <!-- CABECERA -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ALERTA CAYMA — TERMINAL CIUDADANA"
+            android:textColor="#38BDF8"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Sistema Multi-Riesgo Arequipa"
+            android:textColor="#F8FAFC"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- ESTADO DE CONEXION Y SERVIDOR -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#0D1424"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvStatusConexion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="● Conectando con COE Cayma..."
+                android:textColor="#10B981"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etServerUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="#121C32"
+                android:hint="http://192.168.100.5:8000"
+                android:inputType="textUri"
+                android:padding="8dp"
+                android:text="http://192.168.100.5:8000"
+                android:textColor="#E2E8F0"
+                android:textColorHint="#64748B"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- SELECTOR DE TIPO DE EMERGENCIA -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="TIPO DE EMERGENCIA"
+            android:textColor="#94A3B8"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spTipoEmergencia"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="6dp"
+            android:background="#121C32"
+            android:paddingHorizontal="10dp" />
+
+        <EditText
+            android:id="@+id/etDescripcion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="#121C32"
+            android:hint="Describe brevemente qué ocurre (ej. desborde torrentera, derrumbe...)"
+            android:minLines="2"
+            android:padding="10dp"
+            android:textColor="#F1F5F9"
+            android:textColorHint="#64748B"
+            android:textSize="14sp" />
+
+        <!-- BOTON PRINCIPAL SOS -->
+        <Button
+            android:id="@+id/btnEnviarSos"
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#EF4444"
+            android:text="ENVIAR ALERTA SOS INMEDIATA"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <!-- TARJETA SISMOGRAFO Y TELEMETRIA -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="#0D1424"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TELEMETRÍA DE SENSORES Y GPS"
+                android:textColor="#38BDF8"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvGpsInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="GPS: Obteniendo coordenadas de Cayma..."
+                android:textColor="#E2E8F0"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvSismografo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Acelerómetro Sísmico: 0.02 G (Estable)"
+                android:textColor="#10B981"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvZonaSegura"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Punto Seguro Cercano: Plaza Principal de Cayma"
+                android:textColor="#FBBF24"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- MODO MESH OFFLINE Y COLA PENDIENTE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#121C32"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tvMeshCola"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Red Mesh Offline: Listo | Cola pendiente: 0"
+                android:textColor="#D8B4FE"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnSincronizarMesh"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#7E22CE"
+                android:text="Sincronizar Cola Offline / Probar Nodo Mesh"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- LOG DE RESPUESTA DEL COE -->
+        <TextView
+            android:id="@+id/tvLogRespuesta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#090D16"
+            android:padding="10dp"
+            android:text="Esperando acción..."
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+</ScrollView>

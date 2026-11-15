@@ -1,83 +1,564 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centro de Control — Alerta Cayma</title>
-    <style>
-        body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; }
-        .badge { background: #dc2626; padding: 6px 12px; border-radius: 6px; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
-        .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
-        .btn { background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-        .btn:hover { background: #1d4ed8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
-        th { background: #0f172a; color: #94a3b8; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COER / COE Cayma — Sala Situacional Satelital</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <style>
+    :root {
+      --bg-base: #060911;
+      --bg-panel: #0b111e;
+      --bg-card: #11192c;
+      --border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+      --accent-green: #10b981;
+      --accent-purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    header {
+      background: linear-gradient(90deg, #090f1d 0%, #0f172a 100%);
+      border-bottom: 1px solid #26354d;
+      padding: 9px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .shield {
+      width: 34px; height: 34px; border-radius: 7px;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      border: 1px solid #f87171;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 0.85rem; color: #fff;
+    }
+    .brand h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.4px; color: #f8fafc; }
+    .brand-sub { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; color: var(--accent-blue); margin-top: 1px; }
+    .pulse-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse 1.8s infinite;
+    }
+    .pulse-dot.offline { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+    @keyframes pulse { 0%, 100% { transform: scale(0.95); opacity: 0.85; } 50% { transform: scale(1.25); opacity: 1; } }
+
+    .telemetry-bar {
+      display: flex; gap: 14px; background: rgba(17, 25, 44, 0.9);
+      padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border);
+      font-size: 0.78rem; align-items: center;
+    }
+    .telemetry-bar b { color: var(--accent-blue); }
+    .seismic-pill {
+      background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fcd34d; padding: 3px 9px; border-radius: 5px; font-weight: 600;
+    }
+
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    button {
+      cursor: pointer; border: none; border-radius: 6px; padding: 7px 12px;
+      font-size: 0.78rem; font-weight: 600; transition: all 0.15s ease;
+    }
+    .btn-sim { background: linear-gradient(135deg, #2563eb, #0284c7); color: #fff; }
+    .btn-sim:hover { filter: brightness(1.15); }
+    .btn-clean { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
+    .btn-clean:hover { background: #334155; color: #fff; }
+    .btn-audio { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
+    .btn-audio.active { border-color: var(--accent-green); color: var(--accent-green); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+      padding: 9px 18px; background: var(--bg-base); border-bottom: 1px solid var(--border);
+    }
+    .kpi-card {
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 13px; display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .kpi-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.6px; }
+    .kpi-val { font-size: 1.35rem; font-weight: 800; margin-top: 2px; }
+    .kpi-sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+    .workspace { display: grid; grid-template-columns: 1.55fr 1fr; flex: 1; overflow: hidden; }
+    #map-container { position: relative; width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; background: #0a0f1c; }
+
+    .map-layer-switcher {
+      position: absolute; top: 14px; right: 14px; z-index: 950;
+      background: rgba(11, 17, 30, 0.94); border: 1px solid #334155;
+      border-radius: 8px; padding: 6px; display: flex; gap: 5px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .layer-btn { background: transparent; color: #cbd5e1; padding: 5px 10px; font-size: 0.74rem; border-radius: 5px; }
+    .layer-btn.active { background: var(--accent-blue); color: #06101f; font-weight: 700; }
+
+    .map-overlay-legend {
+      position: absolute; bottom: 18px; left: 14px; z-index: 900;
+      background: rgba(11, 17, 30, 0.93); border: 1px solid #334155;
+      padding: 10px 14px; border-radius: 8px; font-size: 0.74rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+    .dot-l { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .line-l { width: 16px; height: 3px; display: inline-block; flex-shrink: 0; }
+
+    .sidebar {
+      background: var(--bg-panel); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 11px 15px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; gap: 5px; flex-wrap: wrap; }
+    .filter-btn {
+      background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border);
+      padding: 4px 8px; font-size: 0.72rem; border-radius: 5px;
+    }
+    .filter-btn.active { background: var(--accent-blue); color: #05101f; border-color: var(--accent-blue); }
+
+    .feed-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .alert-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-left: 4px solid var(--accent-red);
+      border-radius: 8px; padding: 11px;
+    }
+    .alert-card.EN_PROCESO { border-left-color: var(--accent-amber); }
+    .alert-card.enjambre { box-shadow: 0 0 14px rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.55); }
+
+    .card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .badge { padding: 2px 7px; border-radius: 4px; font-size: 0.69rem; font-weight: 700; text-transform: uppercase; }
+    .badge-cat { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.45); }
+    .badge-mesh { background: rgba(168, 85, 247, 0.22); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
+    .badge-swarm { background: #dc2626; color: #fff; }
+    .badge-status-ACTIVA { background: rgba(239, 68, 68, 0.22); color: #f87171; }
+    .badge-status-EN_PROCESO { background: rgba(245, 158, 11, 0.22); color: #fbbf24; }
+
+    .card-desc { font-size: 0.84rem; color: #f8fafc; margin-bottom: 8px; line-height: 1.35; }
+    .card-meta {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;
+      font-size: 0.73rem; color: var(--text-muted); background: rgba(6, 9, 17, 0.55);
+      padding: 7px 9px; border-radius: 6px; margin-bottom: 8px;
+    }
+    .card-meta b { color: var(--text-main); }
+
+    .card-actions { display: flex; gap: 6px; align-items: center; }
+    select.unit-select {
+      flex: 1; background: var(--bg-base); color: var(--text-main); border: 1px solid #334155;
+      border-radius: 5px; padding: 5px 7px; font-size: 0.74rem;
+    }
+    .btn-dispatch { background: var(--accent-amber); color: #090d16; padding: 5px 10px; font-size: 0.74rem; }
+    .btn-archive { background: var(--accent-green); color: #051b11; padding: 5px 10px; font-size: 0.74rem; }
+    .btn-locate { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 5px 8px; font-size: 0.74rem; }
+
+    .sos-marker {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #ef4444; border: 2.5px solid #ffffff;
+      box-shadow: 0 0 16px #ef4444, 0 0 4px #000;
+    }
+    .sos-marker.en-proceso { background: #f59e0b; box-shadow: 0 0 16px #f59e0b; }
+    .safe-marker {
+      width: 16px; height: 16px; border-radius: 4px;
+      background: #10b981; border: 2px solid #ffffff;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <div>
-            <h1>Centro de Monitoreo de Riesgos — Cayma, Arequipa</h1>
-            <p id="clima-info">Cargando estado meteorológico y torrenteras...</p>
-        </div>
-        <span class="badge">SISTEMA ACTIVO</span>
+
+<header>
+  <div class="brand">
+    <div class="shield">COE</div>
+    <div>
+      <h1>ALERTA CAYMA — SALA SITUACIONAL GEOESPACIAL</h1>
+      <div class="brand-sub">
+        <div id="ws-indicator" class="pulse-dot"></div>
+        <span id="ws-status-text">ENLACE SATELITAL Y WEBSOCKET ACTIVO | AREQUIPA - PERÚ</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="telemetry-bar">
+    <span>Torrenteras: <b id="w-torrentera">BAJO</b></span>
+    <span>Temp: <b id="w-temp">--°C</b></span>
+    <span>Lluvia: <b id="w-rain">0 mm</b></span>
+    <span class="seismic-pill" id="usgs-badge">USGS Sismos: Consultando...</span>
+  </div>
+
+  <div class="top-actions">
+    <button id="btn-audio" class="btn-audio" onclick="toggleAudio()">Alarma: OFF</button>
+    </div>
+</header>
+
+<section class="kpi-grid">
+  <div class="kpi-card">
+    <span class="kpi-label">Incidentes Activos</span>
+    <span class="kpi-val" id="kpi-activos" style="color: var(--accent-red);">0</span>
+    <span class="kpi-sub">Georreferenciados en Cayma</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Unidades Despachadas</span>
+    <span class="kpi-val" id="kpi-proceso" style="color: var(--accent-amber);">0</span>
+    <span class="kpi-sub">Serenazgo / Defensa Civil</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Zona Crítica / Enjambre</span>
+    <span class="kpi-val" id="kpi-criticos" style="color: #fb7185;">0</span>
+    <span class="kpi-sub">Torrenteras / Correlación IA</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Red Mesh Offline</span>
+    <span class="kpi-val" id="kpi-mesh" style="color: var(--accent-purple);">0</span>
+    <span class="kpi-sub">Sin cobertura celular</span>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-label">Infraestructura Cloud</span>
+    <span class="kpi-val" id="kpi-cloud" style="font-size: 0.95rem; color: var(--accent-green); margin-top: 6px;">VERIFICANDO...</span>
+    <span class="kpi-sub">Redundancia Dual Firebase/Supabase</span>
+  </div>
+</section>
+
+<main class="workspace">
+  <div id="map-container">
+    <div id="map"></div>
+
+    <div class="map-layer-switcher">
+      <button class="layer-btn active" id="btn-sat" onclick="cambiarCapaMapa('satelite', this)">Satélite Híbrido</button>
+      <button class="layer-btn" id="btn-topo" onclick="cambiarCapaMapa('topografico', this)">Relieve / Curvas</button>
+      <button class="layer-btn" id="btn-osm" onclick="cambiarCapaMapa('calles', this)">Calles Detalladas</button>
     </div>
 
-    <div class="grid">
-        <div class="card">
-            <h3>Puntos de Calor Activos</h3>
-            <h2 id="total-puntos">0</h2>
-        </div>
-        <div class="card">
-            <h3>Estado de Servidores</h3>
-            <p id="estado-nube">Verificando Firebase y Supabase...</p>
-        </div>
+    <div class="map-overlay-legend">
+      <b>CARTOGRAFÍA TÁCTICA — CAYMA / AREQUIPA</b>
+      <div class="legend-item"><span class="dot-l" style="background:#ef4444;"></span> Alerta SOS Activa</div>
+      <div class="legend-item"><span class="dot-l" style="background:#f59e0b;"></span> Unidad Despachada (En Camino)</div>
+      <div class="legend-item"><span class="dot-l" style="background:#10b981; border-radius:2px;"></span> Zonas Seguras / Albergues Cayma</div>
+      <div class="legend-item"><span class="line-l" style="background:#06b6d4;"></span> Cauce Torrenteras (Chullo / San Lázaro / Añashuayco)</div>
+      <div class="legend-item"><span class="dot-l" style="background:#f97316;"></span> Radio Exclusión Volcán Misti (12 km)</div>
     </div>
+  </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Categoría</th>
-                <th>Coordenadas (Lat, Lng)</th>
-                <th>Nivel de Riesgo IA</th>
-            </tr>
-        </thead>
-        <tbody id="tabla-alertas"></tbody>
-    </table>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <strong style="font-size:0.86rem;">BITÁCORA TÁCTICA EN VIVO</strong>
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="setFiltro('TODOS', this)">Todos</button>
+        <button class="filter-btn" onclick="setFiltro('sismo', this)">Sismo</button>
+        <button class="filter-btn" onclick="setFiltro('deslizamiento', this)">Huaico</button>
+        <button class="filter-btn" onclick="setFiltro('incendio', this)">Incendio</button>
+        <button class="filter-btn" onclick="setFiltro('sos_critico', this)">SOS</button>
+      </div>
+    </div>
+    <div class="feed-list" id="feed-list"></div>
+  </aside>
+</main>
 
-    <script>
-        async function cargarDatos() {
-            try {
-                const res = await fetch('/api/v1/alertas/mapa-calor');
-                const data = await res.json();
-                document.getElementById('total-puntos').innerText = data.total_puntos;
-                const clima = data.clima_y_torrenteras;
-                document.getElementById('clima-info').innerText = 
-                    `Torrenteras: ${clima.riesgo_torrentera} | Temp: ${clima.temperatura_c ?? '--'}°C | Lluvia: ${clima.lluvia_mm ?? 0} mm`;
+<script>
+  const map = L.map('map', { zoomControl: true }).setView([-16.3480, -71.5480], 14);
 
-                const tbody = document.getElementById('tabla-alertas');
-                tbody.innerHTML = '';
-                data.puntos.forEach(p => {
-                    tbody.innerHTML += `<tr>
-                        <td><strong>${p.categoria.toUpperCase()}</strong></td>
-                        <td>${p.lat}, ${p.lng}</td>
-                        <td>${(p.intensidad * 100).toFixed(0)}%</td>
-                    </tr>`;
-                });
+  const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics | COE Cayma',
+    maxZoom: 19
+  });
+  const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19
+  });
+  const esriTransport = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, opacity: 0.75
+  });
+  const capaSateliteHibrida = L.layerGroup([esriSat, esriTransport, esriLabels]);
 
-                const healthRes = await fetch('/api/v1/alertas/health');
-                const health = await healthRes.json();
-                document.getElementById('estado-nube').innerText = 
-                    `IA: ${health.ia_modelo_cargado ? 'OK' : 'OFF'} | Firebase: ${health.firebase_conectado ? 'OK' : 'Local'} | Supabase: ${health.supabase_conectado ? 'OK' : 'Local'}`;
-            } catch (e) {
-                console.error(e);
-            }
+  const capaTopografica = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data: &copy; OpenStreetMap, SRTM | Style: &copy; OpenTopoMap',
+    maxZoom: 17
+  });
+
+  const capaCallesOsm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors | COE Cayma',
+    maxZoom: 19
+  });
+
+  capaSateliteHibrida.addTo(map);
+  let capaBaseActual = capaSateliteHibrida;
+
+  function cambiarCapaMapa(tipo, btn) {
+    map.removeLayer(capaBaseActual);
+    if (tipo === 'satelite') capaBaseActual = capaSateliteHibrida;
+    else if (tipo === 'topografico') capaBaseActual = capaTopografica;
+    else capaBaseActual = capaCallesOsm;
+    capaBaseActual.addTo(map);
+
+    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  let markersLayer = L.layerGroup().addTo(map);
+  let geoRisksLayer = L.layerGroup().addTo(map);
+  let safeZonesLayer = L.layerGroup().addTo(map);
+  let heatLayer = null;
+  let alertasActuales = [];
+  let filtroCategoria = 'TODOS';
+  let audioHabilitado = false;
+
+  function reproducirSirenaTactica() {
+    if (!audioHabilitado) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.18);
+      osc.frequency.linearRampToValueAtTime(660, ctx.currentTime + 0.36);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch (e) {}
+  }
+
+  function toggleAudio() {
+    audioHabilitado = !audioHabilitado;
+    const btn = document.getElementById('btn-audio');
+    btn.textContent = audioHabilitado ? 'Alarma: ON' : 'Alarma: OFF';
+    btn.classList.toggle('active', audioHabilitado);
+    if (audioHabilitado) reproducirSirenaTactica();
+  }
+
+  function dibujarInfraestructuraGeografica(clima) {
+    geoRisksLayer.clearLayers();
+    safeZonesLayer.clearLayers();
+
+    (clima.cauces_torrenteras || []).forEach(cauce => {
+      L.polyline(cauce.coordenadas, {
+        color: '#06b6d4',
+        weight: 4,
+        opacity: 0.85,
+        dashArray: '8, 6'
+      }).bindPopup(`<b>${cauce.nombre}</b><br>Nivel de riesgo hídrico: <b>${cauce.riesgo}</b>`).addTo(geoRisksLayer);
+    });
+
+    (clima.puntos_monitoreados || []).forEach(p => {
+      const esVolcan = p.tipo === 'volcan';
+      const color = esVolcan ? '#f97316' : '#06b6d4';
+      L.circle([p.lat, p.lng], {
+        radius: p.radio_alerta_m,
+        color: color,
+        fillColor: color,
+        fillOpacity: esVolcan ? 0.06 : 0.14,
+        weight: 1.5,
+        dashArray: '5, 5'
+      }).bindPopup(`<b>${p.nombre}</b><br>Radio de impacto: ${p.radio_alerta_m} m`).addTo(geoRisksLayer);
+    });
+
+    (clima.zonas_seguras || []).forEach(z => {
+      const safeIcon = L.divIcon({ html: `<div class="safe-marker"></div>`, className: '', iconSize: [16, 16] });
+      L.marker([z.lat, z.lng], { icon: safeIcon })
+        .bindPopup(`<div style="color:#0f172a;"><b>${z.nombre}</b><br>Punto de Reunión y Evacuación Oficial</div>`)
+        .addTo(safeZonesLayer);
+    });
+  }
+
+  function centrarEnAlerta(lat, lng) {
+    if (Math.abs(lat) <= 85) {
+      map.flyTo([lat, lng], 16, { duration: 1.1 });
+    }
+  }
+
+  function renderizarDashboard() {
+    markersLayer.clearLayers();
+    const heatPoints = [];
+    const filtradas = alertasActuales.filter(a => filtroCategoria === 'TODOS' || a.categoria === filtroCategoria);
+
+    filtradas.forEach(a => {
+      const lat = parseFloat(a.lat);
+      const lng = parseFloat(a.lng);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      if (Math.abs(lat) <= 85 && !(lat === -90 && lng === -180)) {
+        heatPoints.push([lat, lng, a.intensidad || 0.85]);
+        const iconHtml = `<div class="sos-marker ${a.estado === 'EN_PROCESO' ? 'en-proceso' : ''}"></div>`;
+        const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [20, 20] });
+
+        L.marker([lat, lng], { icon: customIcon })
+          .bindPopup(`
+            <div style="color:#0f172a; min-width:205px;">
+              <strong>${a.categoria.toUpperCase()}</strong> — <b>${a.estado}</b><br>
+              <small>${a.descripcion || 'Sin descripción'}</small><hr style="margin:5px 0;">
+              <b>Riesgo IA:</b> ${Math.round((a.intensidad || 0.8) * 100)}%<br>
+              <b>Sector:</b> ${a.zona_cercana || 'Cayma'}<br>
+              <b>Batería Móvil:</b> ${a.nivel_bateria}% ${a.origen_offline_mesh ? '📡 MESH' : ''}
+            </div>
+          `)
+          .addTo(markersLayer);
+      }
+    });
+
+    if (heatLayer) map.removeLayer(heatLayer);
+    if (heatPoints.length > 0 && L.heatLayer) {
+      heatLayer = L.heatLayer(heatPoints, { radius: 30, blur: 20, maxZoom: 16 }).addTo(map);
+    }
+
+    const feed = document.getElementById('feed-list');
+    if (filtradas.length === 0) {
+      feed.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px;">Sin incidentes activos. Sistema en vigilancia.</div>`;
+      return;
+    }
+
+    feed.innerHTML = filtradas.map(a => {
+      const riesgoPct = Math.round((a.intensidad || 0.8) * 100);
+      const distTxt = a.distancia_riesgo_m ? `${a.distancia_riesgo_m} m` : 'Fuera de rango';
+      const esCoordenadaReal = Math.abs(Number(a.lat)) <= 85;
+      return `
+        <div class="alert-card ${a.estado} ${a.enjambre_confirmado ? 'enjambre' : ''}">
+          <div class="card-top">
+            <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+              <span class="badge badge-cat">${a.categoria}</span>
+              ${a.origen_offline_mesh ? '<span class="badge badge-mesh">MESH OFFLINE</span>' : ''}
+              ${a.enjambre_confirmado ? '<span class="badge badge-swarm">ENJAMBRE IA</span>' : ''}
+            </div>
+            <span class="badge badge-status-${a.estado}">${a.estado}</span>
+          </div>
+
+          <div class="card-desc">${a.descripcion || 'Alerta SOS activada desde dispositivo móvil'}</div>
+
+          <div class="card-meta">
+            <div>Riesgo IA: <b>${riesgoPct}%</b></div>
+            <div>Batería: <b>${a.nivel_bateria}%</b></div>
+            <div>Geo-Zona: <b>${a.zona_cercana || 'Cayma'}</b></div>
+            <div>Dist. Riesgo: <b>${distTxt}</b></div>
+            <div style="grid-column: span 2;">
+              Coords: <b>${Number(a.lat).toFixed(4)}, ${Number(a.lng).toFixed(4)}</b>
+              ${a.unidad_asignada ? ` | Unidad: <b style="color:#fbbf24;">${a.unidad_asignada}</b>` : ''}
+            </div>
+          </div>
+
+          <div class="card-actions">
+            ${esCoordenadaReal ? `<button class="btn-locate" onclick="centrarEnAlerta(${a.lat}, ${a.lng})">Ubicar</button>` : ''}
+            <select id="unit-${a.alerta_id}" class="unit-select">
+              <option value="Serenazgo Cayma #01">Serenazgo Cayma #01</option>
+              <option value="Defensa Civil Cayma">Defensa Civil Cayma</option>
+              <option value="Bomberos Arequipa B-19">Bomberos Arequipa B-19</option>
+              <option value="Ambulancia SAMU #03">Ambulancia SAMU #03</option>
+            </select>
+            <button class="btn-dispatch" onclick="despacharUnidad('${a.alerta_id}')">Despachar</button>
+            <button class="btn-archive" onclick="archivarAlerta('${a.alerta_id}')">Atendida</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function setFiltro(cat, btn) {
+    filtroCategoria = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderizarDashboard();
+  }
+
+  async function cargarDatosCOE() {
+    try {
+      const [resMapa, resHealth] = await Promise.all([
+        fetch('/api/v1/alertas/mapa-calor'),
+        fetch('/api/v1/alertas/health')
+      ]);
+      const dataMapa = await resMapa.json();
+      const dataHealth = await resHealth.json();
+
+      const clima = dataMapa.clima_y_torrenteras || {};
+      document.getElementById('w-torrentera').textContent = clima.riesgo_torrentera || 'BAJO';
+      document.getElementById('w-temp').textContent = `${clima.temperatura_c ?? '--'}°C`;
+      document.getElementById('w-rain').textContent = `${clima.lluvia_mm ?? 0} mm`;
+
+      const sismo = clima.sismo_regional || {};
+      const usgsBadge = document.getElementById('usgs-badge');
+      if (sismo.hay_sismo_reciente) {
+        usgsBadge.textContent = `USGS Sismo: M${sismo.magnitud} (${sismo.distancia_cayma_km} km)`;
+      } else {
+        usgsBadge.textContent = `USGS Arequipa: Sin sismos >= M2.5`;
+      }
+
+      dibujarInfraestructuraGeografica(clima);
+
+      const m = dataMapa.metricas_coe || {};
+      document.getElementById('kpi-activos').textContent = m.total_activos ?? dataMapa.total_puntos;
+      document.getElementById('kpi-proceso').textContent = m.en_atencion ?? 0;
+      document.getElementById('kpi-criticos').textContent = m.zona_critica_o_enjambre ?? 0;
+      document.getElementById('kpi-mesh').textContent = m.origen_mesh_offline ?? 0;
+      document.getElementById('kpi-cloud').textContent =
+        `IA:${dataHealth.ia_modelo_cargado ? 'OK' : 'ERR'} | FB:${dataHealth.firebase_conectado ? 'OK' : 'ERR'} | SB:${dataHealth.supabase_conectado ? 'OK' : 'ERR'}`;
+
+      alertasActuales = dataMapa.puntos || [];
+      renderizarDashboard();
+    } catch (e) {
+      console.error('Error cargando datos COE:', e);
+    }
+  }
+
+  async function despacharUnidad(alertaId) {
+    const select = document.getElementById(`unit-${alertaId}`);
+    const unidad = select ? select.value : 'Serenazgo Cayma #01';
+    await fetch(`/api/v1/alertas/${alertaId}/despachar`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unidad })
+    });
+    cargarDatosCOE();
+  }
+
+  async function archivarAlerta(alertaId) {
+    await fetch(`/api/v1/alertas/${alertaId}/archivar`, { method: 'PATCH' });
+    cargarDatosCOE();
+  }
+
+  async function purgarPruebas() {
+    await fetch('/api/v1/alertas/purgar-pruebas', { method: 'POST' });
+    cargarDatosCOE();
+  }
+
+  async function simularIncidente() {
+    await fetch('/api/v1/alertas/simular-cayma', { method: 'POST' });
+    cargarDatosCOE();
+  }
+
+  function conectarWebSocket() {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${window.location.host}/ws/coe`);
+
+    ws.onopen = () => {
+      document.getElementById('ws-indicator').classList.remove('offline');
+      document.getElementById('ws-status-text').textContent = 'ENLACE SATELITAL Y WEBSOCKET ACTIVO | AREQUIPA - PERÚ';
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.evento === 'NUEVA_ALERTA') {
+        reproducirSirenaTactica();
+        if (msg.alerta && Math.abs(msg.alerta.latitud) <= 85) {
+          map.flyTo([msg.alerta.latitud, msg.alerta.longitud], 15, { duration: 1.2 });
         }
-        cargarDatos();
-        setInterval(cargarDatos, 15000);
-    </script>
+      }
+      cargarDatosCOE();
+    };
+
+    ws.onclose = () => {
+      document.getElementById('ws-indicator').classList.add('offline');
+      document.getElementById('ws-status-text').textContent = 'RECONECTANDO ENLACE...';
+      setTimeout(conectarWebSocket, 3000);
+    };
+  }
+
+  cargarDatosCOE();
+  conectarWebSocket();
+</script>
 </body>
 </html>
