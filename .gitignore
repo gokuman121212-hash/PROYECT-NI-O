@@ -1,20 +1,41 @@
-﻿# Credenciales y secretos (NUNCA subir a Git)
-backend/.env
-backend/firebase-adminsdk.json
-*.env
+﻿# Archivos de compilacion Android y Gradle
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+build/
+.gradle/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
 
-# Entornos virtuales y cache de Python
-backend/venv/
-venv/
+# Python y entornos virtuales
 __pycache__/
 *.py[cod]
-.pytest_cache/
+*$py.class
+venv/
+.venv/
+env/
 
-# Compilaciones y cache de Android / Gradle / IDE
-android_app/.gradle/
-android_app/build/
-android_app/app/build/
-android_app/.idea/
-*.iml
-local.properties
+# Credenciales y llaves sensibles
+.env
+*.env
+*firebase*adminsdk*.json
+serviceAccountKey.json
+*.jks
+*.keystore
+
+# Sistema operativo
 .DS_Store
+Thumbs.db
+
+*.hprof
+
+resumen.txt

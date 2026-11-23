@@ -1,27 +1,44 @@
-package com.cayma.alertasos.mesh
+﻿package com.cayma.alertasos.mesh
 
 import android.content.Context
 import android.util.Log
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
+import com.google.gson.Gson
 import java.nio.charset.StandardCharsets
+
+data class PaqueteMesh(
+    val tipoPaquete: String, // "ALERTA", "APOYO_EN_CAMINO", "CHAT_VECINAL"
+    val alertaId: String = "",
+    val payloadJson: String
+)
 
 class OfflineMeshManager(
     private val context: Context,
-    private val onAlertaRecibidaDeVecino: (String) -> Unit
+    private val onPaqueteRecibido: (PaqueteMesh) -> Unit
 ) {
-    private val SERVICE_ID = "com.cayma.alertasos.MESH_NETWORK"
+    private val SERVICE_ID = "com.cayma.alertasos.AREQUIPA_MESH_V2"
     private val STRATEGY = Strategy.P2P_CLUSTER
     private val nodosConectados = mutableSetOf<String>()
+    private val gson = Gson()
+
+    val cantidadVecinosConectados: Int
+        get() = nodosConectados.size
 
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             payload.asBytes()?.let { bytes ->
-                val mensajeJson = String(bytes, StandardCharsets.UTF_8)
-                Log.d("MeshNetwork", "Alerta recibida por malla offline desde $endpointId: $mensajeJson")
-                onAlertaRecibidaDeVecino(mensajeJson)
-                // Retransmitir a otros vecinos conectados (salto multi-hop)
-                retransmitirAlerta(mensajeJson, excluirEndpoint = endpointId)
+                val raw = String(bytes, StandardCharsets.UTF_8)
+                Log.d("ArequipaMesh", "Paquete P2P recibido desde $endpointId: $raw")
+                try {
+                    val paquete = gson.fromJson(raw, PaqueteMesh::class.java)
+                    onPaqueteRecibido(paquete)
+                    retransmitirPaquete(paquete, excluirEndpoint = endpointId)
+                } catch (_: Exception) {
+                    // Compatibilidad con paquetes de alerta directa
+                    val fallback = PaqueteMesh(tipoPaquete = "ALERTA", payloadJson = raw)
+                    onPaqueteRecibido(fallback)
+                }
             }
         }
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {}
@@ -55,11 +72,16 @@ class OfflineMeshManager(
         }, discOptions)
     }
 
-    fun retransmitirAlerta(alertaJson: String, excluirEndpoint: String? = null) {
+    fun retransmitirPaquete(paquete: PaqueteMesh, excluirEndpoint: String? = null) {
         val destinos = nodosConectados.filter { it != excluirEndpoint }
         if (destinos.isNotEmpty()) {
-            val payload = Payload.fromBytes(alertaJson.toByteArray(StandardCharsets.UTF_8))
+            val json = gson.toJson(paquete)
+            val payload = Payload.fromBytes(json.toByteArray(StandardCharsets.UTF_8))
             Nearby.getConnectionsClient(context).sendPayload(destinos, payload)
         }
+    }
+
+    fun retransmitirAlerta(alertaJson: String) {
+        retransmitirPaquete(PaqueteMesh(tipoPaquete = "ALERTA", payloadJson = alertaJson))
     }
 }

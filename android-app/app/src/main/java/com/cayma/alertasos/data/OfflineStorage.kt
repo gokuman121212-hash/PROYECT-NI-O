@@ -1,23 +1,34 @@
-package com.cayma.alertasos.data
+﻿package com.cayma.alertasos.data
 
 import android.content.Context
 import androidx.room.*
-import androidx.work.*
-import com.cayma.alertasos.network.AlertaRequest
-import com.cayma.alertasos.network.SosApiService
-import java.util.concurrent.TimeUnit
 
-@Entity(tableName = "alertas_pendientes")
+@Entity(tableName = "alertas_offline")
 data class AlertaLocalEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val usuarioId: String,
+    val nombreUsuario: String = "Vecino Arequipa",
+    val distrito: String = "Arequipa",
+    val sectorReferencia: String = "",
     val latitud: Double,
     val longitud: Double,
     val tipo: String,
     val descripcion: String,
     val nivelBateria: Int,
-    val timestampMs: Long = System.currentTimeMillis(),
+    val timestamp: Long = System.currentTimeMillis(),
     val sincronizado: Boolean = false
+)
+
+@Entity(tableName = "mensajes_chat_local")
+data class MensajeChatLocalEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val alertaId: String,
+    val remitenteId: String,
+    val nombreRemitente: String,
+    val rol: String,
+    val mensaje: String,
+    val origenMesh: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 @Dao
@@ -25,80 +36,82 @@ interface AlertaDao {
     @Insert
     suspend fun insertarAlerta(alerta: AlertaLocalEntity)
 
-    @Query("SELECT * FROM alertas_pendientes WHERE sincronizado = 0")
+    @Query("SELECT * FROM alertas_offline WHERE sincronizado = 0")
     suspend fun obtenerPendientes(): List<AlertaLocalEntity>
 
-    @Query("UPDATE alertas_pendientes SET sincronizado = 1 WHERE id = :id")
-    suspend fun marcarSincronizado(id: Int)
+    @Query("UPDATE alertas_offline SET sincronizado = 1 WHERE id = :id")
+    suspend fun marcarSincronizada(id: Int)
 
-    // Limpieza automatica (TTL) de registros antiguos ya sincronizados (> 7 dias)
-    @Query("DELETE FROM alertas_pendientes WHERE sincronizado = 1 AND timestampMs < :limiteTiempo")
-    suspend fun limpiarAntiguos(limiteTiempo: Long)
+    @Insert
+    suspend fun insertarMensajeChat(msg: MensajeChatLocalEntity)
+
+    @Query("SELECT * FROM mensajes_chat_local WHERE alertaId = :alertaId ORDER BY timestamp ASC")
+    suspend fun obtenerChatPorAlerta(alertaId: String): List<MensajeChatLocalEntity>
 }
 
-@Database(entities = [AlertaLocalEntity::class], version = 1, exportSchema = false)
+@Database(entities = [AlertaLocalEntity::class, MensajeChatLocalEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun alertaDao(): AlertaDao
 
     companion object {
-        @Volatile private var INSTANCE: AppDatabase? = null
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                Room.databaseBuilder(
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "alerta_cayma_offline.db"
-                ).build().also { INSTANCE = it }
+                    "alerta_arequipa_offline_db"
+                ).fallbackToDestructiveMigration().build()
+                INSTANCE = instance
+                instance
             }
         }
     }
 }
 
-class SyncAlertasWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
-    override suspend fun doWork(): Result {
-        val dao = AppDatabase.getDatabase(applicationContext).alertaDao()
-        val api = SosApiService.create()
-        val pendientes = dao.obtenerPendientes()
+data class PerfilCiudadano(
+    val usuarioId: String,
+    val nombreCompleto: String,
+    val telefono: String,
+    val distrito: String,
+    val sectorReferencia: String,
+    val latitud: Double,
+    val longitud: Double
+)
 
-        for (item in pendientes) {
-            try {
-                api.enviarAlerta(
-                    AlertaRequest(
-                        usuario_id = item.usuarioId,
-                        latitud = item.latitud,
-                        longitud = item.longitud,
-                        tipo = item.tipo,
-                        descripcion = item.descripcion,
-                        nivel_bateria = item.nivelBateria,
-                        origen_offline_mesh = true
-                    )
-                )
-                dao.marcarSincronizado(item.id)
-            } catch (_: Exception) {
-                return Result.retry()
-            }
+object SessionManager {
+    private const val PREFS = "alerta_arequipa_session"
+
+    fun guardarSesion(context: Context, perfil: PerfilCiudadano) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            putString("usuario_id", perfil.usuarioId)
+            putString("nombre", perfil.nombreCompleto)
+            putString("telefono", perfil.telefono)
+            putString("distrito", perfil.distrito)
+            putString("sector", perfil.sectorReferencia)
+            putFloat("lat", perfil.latitud.toFloat())
+            putFloat("lng", perfil.longitud.toFloat())
+            apply()
         }
-        // Limpiar registros de mas de 7 dias
-        dao.limpiarAntiguos(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7))
-        return Result.success()
     }
-}
 
-object OfflineSyncScheduler {
-    fun programarSincronizacionAlVolverInternet(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val request = OneTimeWorkRequestBuilder<SyncAlertasWorker>()
-            .setConstraints(constraints)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "SyncAlertasCayma",
-            ExistingWorkPolicy.REPLACE,
-            request
+    fun obtenerSesion(context: Context): PerfilCiudadano? {
+        val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val id = sp.getString("usuario_id", null) ?: return null
+        return PerfilCiudadano(
+            usuarioId = id,
+            nombreCompleto = sp.getString("nombre", "Vecino Arequipa") ?: "Vecino Arequipa",
+            telefono = sp.getString("telefono", "") ?: "",
+            distrito = sp.getString("distrito", "Cercado de Arequipa") ?: "Cercado de Arequipa",
+            sectorReferencia = sp.getString("sector", "") ?: "",
+            latitud = sp.getFloat("lat", -16.3989f).toDouble(),
+            longitud = sp.getFloat("lng", -71.5350f).toDouble()
         )
+    }
+
+    fun cerrarSesion(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
     }
 }

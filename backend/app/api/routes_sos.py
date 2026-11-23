@@ -1,15 +1,25 @@
-import random
+﻿import random
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from app.models.schemas import AlertaCreate, AlertaResponse, EstadoAlerta, TipoEmergencia
+from app.models.schemas import (
+    AlertaCreate, AlertaResponse, EstadoAlerta, TipoEmergencia,
+    UsuarioRegistroRequest, UsuarioLoginRequest, UsuarioResponse,
+    ApoyoVoluntarioRequest, MensajeChatRequest
+)
 from app.services.db_redundancy import db_manager
 from app.ml.classifier import ia_classifier
-from app.integrations.external_risks import obtener_riesgo_climatico_cayma
+from app.integrations.external_risks import (
+    obtener_riesgo_climatico_cayma,
+    esta_en_arequipa_metropolitana,
+    CENTROS_SEGURIDAD_AREQUIPA,
+    RUTAS_HISTORIAL_BLOQUEO,
+    DISTRITOS_AREQUIPA_METRO
+)
 from app.core.config import settings
 
-router = APIRouter(prefix="/api/v1/alertas", tags=["Alertas SOS e IA"])
+router = APIRouter(prefix="/api/v1/alertas", tags=["Alertas SOS Arequipa"])
 limiter = Limiter(key_func=get_remote_address)
 
 class ConnectionManager:
@@ -33,18 +43,45 @@ class ConnectionManager:
 
 ws_manager = ConnectionManager()
 
-class DespachoRequest(BaseModel):
-    unidad: str = "Patrulla Serenazgo Cayma #04"
+@router.post("/auth/registro", response_model=UsuarioResponse)
+async def registrar_ciudadano(req: UsuarioRegistroRequest):
+    if req.distrito not in DISTRITOS_AREQUIPA_METRO or not esta_en_arequipa_metropolitana(req.latitud, req.longitud):
+        raise HTTPException(
+            status_code=403,
+            detail="Cobertura disponible unicamente en Arequipa Metropolitana (provincia de Arequipa). Otras provincias estaran en la v2."
+        )
+    usuario = await db_manager.registrar_usuario_dual(req)
+    return UsuarioResponse(**{k: v for k, v in usuario.items() if k in UsuarioResponse.model_fields})
+
+@router.post("/auth/login", response_model=UsuarioResponse)
+async def iniciar_sesion(req: UsuarioLoginRequest):
+    usuario = await db_manager.autenticar_usuario_dual(req.telefono, req.password)
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Telefono o contrasena incorrectos.")
+    return UsuarioResponse(**{k: v for k, v in usuario.items() if k in UsuarioResponse.model_fields})
+
+@router.get("/geodata-arequipa")
+async def obtener_geodata_arequipa():
+    return {
+        "distritos_habilitados": DISTRITOS_AREQUIPA_METRO,
+        "centros_seguridad": CENTROS_SEGURIDAD_AREQUIPA,
+        "rutas_bloqueo_historico": RUTAS_HISTORIAL_BLOQUEO
+    }
 
 @router.post("/sos", response_model=AlertaResponse)
 @limiter.limit("30/minute")
 async def enviar_alerta_sos(request: Request, alerta: AlertaCreate):
-    analisis_ia = ia_classifier.analizar_reporte(alerta.descripcion, alerta.tipo.value)
+    if not esta_en_arequipa_metropolitana(alerta.latitud, alerta.longitud):
+        raise HTTPException(
+            status_code=403,
+            detail="Fuera de zona de cobertura: solo se permiten alertas dentro de Arequipa Ciudad."
+        )
 
+    analisis_ia = ia_classifier.analizar_reporte(alerta.descripcion, alerta.tipo.value)
     if not analisis_ia["aprobado"] and analisis_ia["confianza"] < settings.CONFIDENCE_THRESHOLD:
         raise HTTPException(
             status_code=422,
-            detail=f"Reporte retenido para revision manual (confianza IA: {analisis_ia['confianza']})"
+            detail=f"Reporte retenido por filtro IA (confianza: {analisis_ia['confianza']})"
         )
 
     resultado = await db_manager.guardar_alerta_redundante(
@@ -52,84 +89,44 @@ async def enviar_alerta_sos(request: Request, alerta: AlertaCreate):
         confianza_ia=analisis_ia["confianza"],
         indice_riesgo=analisis_ia["indice_riesgo_calor"]
     )
-
-    await ws_manager.broadcast({
-        "evento": "NUEVA_ALERTA",
-        "alerta": resultado
-    })
-
+    await ws_manager.broadcast({"evento": "NUEVA_ALERTA", "alerta": resultado})
     return AlertaResponse(**{k: v for k, v in resultado.items() if k in AlertaResponse.model_fields})
 
-@router.patch("/{alerta_id}/despachar")
-async def despachar_unidad_emergencia(alerta_id: str, body: DespachoRequest):
-    await db_manager.actualizar_estado_alerta(alerta_id, EstadoAlerta.EN_PROCESO.value, unidad=body.unidad)
+@router.post("/{alerta_id}/apoyar")
+async def confirmar_ayuda_en_camino(alerta_id: str, body: ApoyoVoluntarioRequest):
+    res = await db_manager.registrar_voluntario_en_camino(alerta_id, body.voluntario_id, body.nombre_voluntario)
     await ws_manager.broadcast({
-        "evento": "ACTUALIZACION_ESTADO",
+        "evento": "VOLUNTARIO_EN_CAMINO",
         "alerta_id": alerta_id,
-        "estado": EstadoAlerta.EN_PROCESO.value,
-        "unidad_asignada": body.unidad
+        "voluntarios_count": res["voluntarios_count"],
+        "nombre_voluntario": body.nombre_voluntario
     })
-    return {
-        "alerta_id": alerta_id,
-        "estado": EstadoAlerta.EN_PROCESO.value,
-        "unidad_asignada": body.unidad,
-        "mensaje": f"Unidad '{body.unidad}' despachada al incidente."
-    }
+    return res
 
-@router.patch("/{alerta_id}/archivar")
-async def archivar_alerta_atendida(alerta_id: str):
-    await db_manager.actualizar_estado_alerta(alerta_id, EstadoAlerta.ARCHIVADA.value)
+@router.get("/{alerta_id}/chat")
+async def listar_chat_alerta(alerta_id: str):
+    mensajes = await db_manager.obtener_mensajes_chat(alerta_id)
+    return {"alerta_id": alerta_id, "mensajes": mensajes}
+
+@router.post("/{alerta_id}/chat")
+async def enviar_mensaje_chat(alerta_id: str, body: MensajeChatRequest):
+    msg = await db_manager.agregar_mensaje_chat(alerta_id, body.model_dump())
     await ws_manager.broadcast({
-        "evento": "ACTUALIZACION_ESTADO",
+        "evento": "NUEVO_MENSAJE_CHAT",
         "alerta_id": alerta_id,
-        "estado": EstadoAlerta.ARCHIVADA.value
+        "mensaje": msg
     })
-    return {"alerta_id": alerta_id, "estado": EstadoAlerta.ARCHIVADA.value, "mensaje": "Incidente archivado para auditoria historica."}
-
-@router.post("/simular-cayma")
-async def simular_incidente_tactico():
-    escenarios = [
-        {"lat": -16.3642, "lng": -71.5475, "tipo": TipoEmergencia.DESLIZAMIENTO, "desc": "Desborde de torrentera Chullo cerca a puente, agua subiendo rapido", "mesh": True, "bat": 22},
-        {"lat": -16.3418, "lng": -71.5459, "tipo": TipoEmergencia.SISMO, "desc": "Sismo fuerte sentido en Plaza de Cayma, caida de muros antiguos", "mesh": False, "bat": 78},
-        {"lat": -16.3525, "lng": -71.5512, "tipo": TipoEmergencia.INCENDIO, "desc": "Incendio estructural en vivienda sector Acequia Alta, humo denso", "mesh": False, "bat": 54},
-        {"lat": -16.3315, "lng": -71.5840, "tipo": TipoEmergencia.SOS_CRITICO, "desc": "Personas atrapadas por lahar en quebrada Anashuayco sin senal celular", "mesh": True, "bat": 14},
-    ]
-    esc = random.choice(escenarios)
-    alerta = AlertaCreate(
-        usuario_id=f"ciudadano_cayma_{random.randint(100,999)}",
-        latitud=esc["lat"] + random.uniform(-0.0015, 0.0015),
-        longitud=esc["lng"] + random.uniform(-0.0015, 0.0015),
-        tipo=esc["tipo"],
-        descripcion=esc["desc"],
-        nivel_bateria=esc["bat"],
-        origen_offline_mesh=esc["mesh"]
-    )
-    analisis_ia = ia_classifier.analizar_reporte(alerta.descripcion, alerta.tipo.value)
-    resultado = await db_manager.guardar_alerta_redundante(
-        alerta,
-        confianza_ia=analisis_ia["confianza"],
-        indice_riesgo=analisis_ia["indice_riesgo_calor"]
-    )
-    await ws_manager.broadcast({"evento": "NUEVA_ALERTA", "alerta": resultado})
-    return resultado
+    return msg
 
 @router.get("/mapa-calor")
 async def obtener_mapa_calor():
     puntos = await db_manager.obtener_puntos_persistentes()
     clima_actual = await obtener_riesgo_climatico_cayma()
-    mesh_count = sum(1 for p in puntos if p.get("origen_offline_mesh"))
-    en_proceso_count = sum(1 for p in puntos if p.get("estado") == EstadoAlerta.EN_PROCESO.value)
-    criticos_count = sum(1 for p in puntos if p.get("en_zona_critica") or p.get("enjambre_confirmado"))
-
     return {
-        "zona": "Cayma - Arequipa",
+        "zona": "Arequipa Metropolitana",
         "clima_y_torrenteras": clima_actual,
-        "metricas_coe": {
-            "total_activos": len(puntos),
-            "en_atencion": en_proceso_count,
-            "origen_mesh_offline": mesh_count,
-            "zona_critica_o_enjambre": criticos_count
-        },
+        "centros_seguridad": CENTROS_SEGURIDAD_AREQUIPA,
+        "rutas_bloqueo_historico": RUTAS_HISTORIAL_BLOQUEO,
         "total_puntos": len(puntos),
         "puntos": puntos
     }
@@ -138,21 +135,8 @@ async def obtener_mapa_calor():
 async def health_check():
     return {
         "status": "online",
-        "ia_modelo_cargado": ia_classifier.fallback_model is not None,
         "firebase_conectado": db_manager.firebase_ready,
-        "supabase_conectado": db_manager.supabase_ready,
-        "clientes_coe_conectados": len(ws_manager.active_connections)
+        "supabase_conectado": db_manager.supabase_ready
     }
-@router.post("/purgar-pruebas")
-async def purgar_alertas_prueba():
-    """Archiva automaticamente registros con coordenadas invalidas o de prueba (-90, -180)."""
-    alertas = await db_manager.obtener_todas_alertas(solo_activas=True)
-    archivadas = 0
-    for a in alertas:
-        lat = float(a.get("latitud", 0))
-        lng = float(a.get("longitud", 0))
-        if abs(lat) > 85 or (lat == -90 and lng == -180):
-            await db_manager.actualizar_estado_alerta(a["alerta_id"], EstadoAlerta.ARCHIVADA.value)
-            archivadas += 1
-    await ws_manager.broadcast({"evento": "PURGA_COMPLETADA", "archivadas": archivadas})
-    return {"archivadas": archivadas, "mensaje": f"Se archivaron {archivadas} registros de prueba."}
+
+
