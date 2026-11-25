@@ -1,0 +1,320 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio de Telemetría y Parámetros — AlertaCayma</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+        :root {
+      --bg-base: #071e2d;
+      --bg-panel: #0b324b;
+      --bg-card: #0f3d5a;
+      --border: #33556b;
+      --text-main: #e6eef1;
+      --text-muted: #a8bfc8;
+      --accent-blue: #648697;
+      --accent-ice: #a8bfc8;
+      --accent-red: #b34c28;
+      --accent-burgundy: #5d312e;
+      --accent-amber: #d69b88;
+      --accent-green: #648697;
+      --accent-purple: #d69b88;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: #061926; border-bottom: 1px solid #26354d;
+      padding: 12px 22px; display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { font-size: 1.05rem; font-weight: 800; color: #f8fafc; }
+    header span { font-size: 0.76rem; color: var(--accent-blue); display: block; }
+    .nav-link {
+      background: #144869; color: #a8bfc8; text-decoration: none;
+      padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+      border: 1px solid #4c7084;
+    }
+    .nav-link:hover { background: #4c7084; }
+
+    .container {
+      display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px;
+      padding: 18px 22px; flex: 1;
+    }
+    .panel {
+      background: var(--bg-panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 13px;
+    }
+    .panel h2 { font-size: 0.9rem; text-transform: uppercase; color: var(--accent-blue); letter-spacing: 0.5px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; background: var(--bg-card); color: var(--text-main);
+      border: 1px solid #4c7084; border-radius: 6px; padding: 8px 10px; font-size: 0.84rem;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent-blue); cursor: pointer; }
+
+    .sensor-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px;
+    }
+    .sensor-header { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px; }
+    .g-badge { font-weight: 800; color: var(--accent-green); }
+    .g-badge.danger { color: var(--accent-red); }
+
+    .checkbox-row {
+      display: flex; align-items: center; gap: 10px; background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.35); padding: 9px 12px; border-radius: 7px;
+      font-size: 0.82rem; color: #e9d5ff; cursor: pointer;
+    }
+    .checkbox-row input { width: 16px; height: 16px; accent-color: var(--accent-purple); }
+
+    .btn-group { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 4px; }
+    button {
+      cursor: pointer; border: none; border-radius: 7px; padding: 11px 14px;
+      font-size: 0.84rem; font-weight: 700; transition: filter 0.15s;
+    }
+    button:hover { filter: brightness(1.12); }
+    .btn-send { background: linear-gradient(135deg, #b34c28, #5d312e); color: #fff; }
+    .btn-swarm { background: linear-gradient(135deg, #648697, #0f3d5a); color: #fff; }
+
+    #mini-map { height: 270px; width: 100%; border-radius: 8px; border: 1px solid #4c7084; }
+    .preset-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+    .preset-btn {
+      background: var(--bg-card); color: #cbd5e1; border: 1px solid #4c7084;
+      padding: 5px 9px; font-size: 0.74rem; border-radius: 5px; font-weight: 600;
+    }
+    .preset-btn:hover { border-color: var(--accent-blue); color: #fff; }
+
+    pre {
+      background: #061926; border: 1px solid #144869; border-radius: 8px;
+      padding: 12px; font-family: Consolas, monospace; font-size: 0.78rem;
+      color: #a8bfc8; overflow-x: auto; flex: 1; min-height: 170px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>PRUEBA DE REPORTES Y SENSORES — ALERTA CAYMA</h1>
+    <span>Prueba cómo se envían las emergencias desde un celular hacia el mapa central</span>
+  </div>
+  <a href="/panel-control" target="_blank" class="nav-link">Ver Mapa de Emergencias ↗</a>
+</header>
+
+<div class="container">
+  <!-- COLUMNA IZQUIERDA: CONTROLES DE PARAMETROS -->
+  <section class="panel">
+    <h2>1. Datos de la Emergencia y del Celular</h2>
+
+    <div class="grid-2">
+      <div>
+        <label>Tipo de Incidente</label>
+        <select id="tipo" onchange="actualizarDescripcionBase()">
+          <option value="medica">Accidente Vehicular / Emergencia Médica</option>
+          <option value="sismo">Sismo / Colapso Estructural</option>
+          <option value="deslizamiento">Huaico / Desborde Torrentera</option>
+          <option value="incendio">Incendio Urbano / Forestal</option>
+          <option value="seguridad">Seguridad / Rescate Ciudadano</option>
+          <option value="sos_critico">SOS Crítico (Riesgo Vital)</option>
+        </select>
+      </div>
+      <div>
+        <label>Nombre o ID del Celular</label>
+        <input type="text" id="usuario_id" value="android_sensor_cayma_01" />
+      </div>
+    </div>
+
+    <div>
+      <label>¿Qué está pasando? (Descripción del reporte)</label>
+      <textarea id="descripcion" rows="2">Colisión vehicular en Av. Cayma cerca a Torrentera Chullo, personas atrapadas requieren ambulancia</textarea>
+    </div>
+
+    <!-- SLIDER DE ACELEROMETRO (IMPACTO / SISMO) -->
+    <div class="sensor-box">
+      <div class="sensor-header">
+        <span>Fuerza del golpe o temblor (Sensor de movimiento):</span>
+        <span id="g-val" class="g-badge">0.15 G (Reposo)</span>
+      </div>
+      <input type="range" id="g-slider" min="0" max="3.0" step="0.05" value="0.15" oninput="actualizarGForce(this.value)" />
+      <small style="color:var(--text-muted); font-size:0.72rem;">Si pasa de <b>1.35 G</b>, el celular envía la alerta solo sin tocar la pantalla.</small>
+    </div>
+
+    <!-- SLIDER DE BATERIA Y MODO MESH -->
+    <div class="grid-2">
+      <div class="sensor-box">
+        <div class="sensor-header">
+          <span>Batería del Teléfono:</span>
+          <b id="bat-val" style="color:var(--accent-blue);">75%</b>
+        </div>
+        <input type="range" id="bateria" min="1" max="100" value="75" oninput="document.getElementById('bat-val').textContent = this.value + '%'" />
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="mesh_offline" />
+        <div>
+          <strong>Enviar sin Internet (Bluetooth cercano)</strong>
+          <div style="font-size:0.71rem; color:#c084fc;">Simular que no hay señal ni datos móviles</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-send" onclick="emitirAlertaControlada()">Enviar Reporte de Prueba</button>
+      <button class="btn-swarm" onclick="emitirEnjambre()">Simular 3 Vecinos Reportando a la Vez</button>
+    </div>
+  </section>
+
+  <!-- COLUMNA DERECHA: SELECTOR GPS EN MAPA Y RESPUESTA JSON -->
+  <section class="panel">
+    <h2>2. Ubicación en Cayma (Haz clic en el mapa o elige un lugar)</h2>
+
+    <div class="preset-bar">
+      <button class="preset-btn" onclick="fijarPunto(-16.3425, -71.5467)">Plaza de Cayma</button>
+      <button class="preset-btn" onclick="fijarPunto(-16.3642, -71.5476)">Torrentera Chullo</button>
+      <button class="preset-btn" onclick="fijarPunto(-16.3518, -71.5472)">Av. Cayma / Acequia Alta</button>
+      <button class="preset-btn" onclick="fijarPunto(-16.3740, -71.5318)">Límite Alto Selva Alegre</button>
+    </div>
+
+    <div id="mini-map"></div>
+
+    <div class="grid-2">
+      <div>
+        <label>Latitud GPS</label>
+        <input type="number" id="lat" step="0.0001" value="-16.3518" onchange="moverMarcadorDesdeInputs()" />
+      </div>
+      <div>
+        <label>Longitud GPS</label>
+        <input type="number" id="lng" step="0.0001" value="-71.5472" onchange="moverMarcadorDesdeInputs()" />
+      </div>
+    </div>
+
+    <div>
+      <label>Confirmación del Sistema Central</label>
+      <pre id="json-output">// Ajusta los parámetros y pulsa "Enviar Reporte de Prueba"...</pre>
+    </div>
+  </section>
+</div>
+
+<script>
+  const miniMap = L.map('mini-map').setView([-16.3518, -71.5472], 14);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(miniMap);
+
+  let pin = L.marker([-16.3518, -71.5472], { draggable: true }).addTo(miniMap);
+
+  pin.on('dragend', () => {
+    const pos = pin.getLatLng();
+    document.getElementById('lat').value = pos.lat.toFixed(5);
+    document.getElementById('lng').value = pos.lng.toFixed(5);
+  });
+
+  miniMap.on('click', (e) => {
+    fijarPunto(e.latlng.lat, e.latlng.lng);
+  });
+
+  function fijarPunto(lat, lng) {
+    document.getElementById('lat').value = Number(lat).toFixed(5);
+    document.getElementById('lng').value = Number(lng).toFixed(5);
+    pin.setLatLng([lat, lng]);
+    miniMap.panTo([lat, lng]);
+  }
+
+  function moverMarcadorDesdeInputs() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      pin.setLatLng([lat, lng]);
+      miniMap.panTo([lat, lng]);
+    }
+  }
+
+  function actualizarGForce(val) {
+    const g = parseFloat(val);
+    const badge = document.getElementById('g-val');
+    if (g > 1.35) {
+      badge.textContent = `${g.toFixed(2)} G (ENVÍO AUTOMÁTICO POR GOLPE/TEMBLOR)`;
+      badge.classList.add('danger');
+      document.getElementById('tipo').value = 'sismo';
+      document.getElementById('descripcion').value = `Impacto / sacudida fuerte detectada por acelerómetro móvil (${g.toFixed(2)} G)`;
+    } else {
+      badge.textContent = `${g.toFixed(2)} G (Normal)`;
+      badge.classList.remove('danger');
+    }
+  }
+
+  function actualizarDescripcionBase() {
+    const ejemplos = {
+      medica: "Colisión vehicular en Av. Cayma cerca a Torrentera Chullo, personas atrapadas requieren ambulancia",
+      sismo: "Movimiento telúrico fuerte percibido en Cayma, caída de mampostería",
+      deslizamiento: "Incremento brusco de caudal y lodo en torrentera, riesgo de desborde",
+      incendio: "Fuego activo y humo denso en inmueble urbano, riesgo de propagación",
+      seguridad: "Persona atrapada en zona de difícil acceso, requiere rescate",
+      sos_critico: "Emergencia crítica con riesgo vital inmediato, solicito auxilio urgente"
+    };
+    const tipo = document.getElementById('tipo').value;
+    document.getElementById('descripcion').value = ejemplos[tipo] || "";
+  }
+
+  async function enviarPaquete(payload) {
+    const resp = await fetch('/api/v1/alertas/sos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await resp.json();
+  }
+
+  async function emitirAlertaControlada() {
+    const out = document.getElementById('json-output');
+    out.textContent = "Transmitiendo paquete al backend...";
+
+    const payload = {
+      usuario_id: document.getElementById('usuario_id').value,
+      latitud: parseFloat(document.getElementById('lat').value),
+      longitud: parseFloat(document.getElementById('lng').value),
+      tipo: document.getElementById('tipo').value,
+      descripcion: document.getElementById('descripcion').value,
+      nivel_bateria: parseInt(document.getElementById('bateria').value, 10),
+      origen_offline_mesh: document.getElementById('mesh_offline').checked
+    };
+
+    try {
+      const data = await enviarPaquete(payload);
+      out.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      out.textContent = "Error de conexión: " + e;
+    }
+  }
+
+  async function emitirEnjambre() {
+    const out = document.getElementById('json-output');
+    out.textContent = "Emitiendo ráfaga de 3 testigos cercanos (< 250m) para correlación IA...";
+    const baseLat = parseFloat(document.getElementById('lat').value);
+    const baseLng = parseFloat(document.getElementById('lng').value);
+
+    const resultados = [];
+    for (let i = 1; i <= 3; i++) {
+      const payload = {
+        usuario_id: `testigo_cercano_0${i}`,
+        latitud: baseLat + (i * 0.0004),
+        longitud: baseLng - (i * 0.0003),
+        tipo: document.getElementById('tipo').value,
+        descripcion: document.getElementById('descripcion').value + ` (Reporte testigo #${i})`,
+        nivel_bateria: 80 - (i * 12),
+        origen_offline_mesh: i === 3
+      };
+      resultados.push(await enviarPaquete(payload));
+    }
+    out.textContent = JSON.stringify({
+      prueba: "CORRELACION_ENJAMBRE_COMPLETADA",
+      ultimo_registro: resultados[resultados.length - 1]
+    }, null, 2);
+  }
+</script>
+</body>
+</html>
