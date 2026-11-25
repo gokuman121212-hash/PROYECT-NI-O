@@ -1,320 +1,557 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Laboratorio de Telemetría y Parámetros — AlertaCayma</title>
+  <title>Panel de Administrador — Alerta Arequipa</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-        :root {
-      --bg-base: #071e2d;
-      --bg-panel: #0b324b;
-      --bg-card: #0f3d5a;
-      --border: #33556b;
-      --text-main: #e6eef1;
-      --text-muted: #a8bfc8;
-      --accent-blue: #648697;
-      --accent-ice: #a8bfc8;
-      --accent-red: #b34c28;
-      --accent-burgundy: #5d312e;
-      --accent-amber: #d69b88;
-      --accent-green: #648697;
-      --accent-purple: #d69b88;
+    :root {
+      --bg-base: #121417;
+      --bg-card: #1A1D22;
+      --bg-elevated: #23272E;
+      --border: #2F3540;
+      --text-main: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --text-steel: #D1D5DB;
+      --accent: #FF4500;
+      --accent-soft: #FF7A3D;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
-
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
     header {
-      background: #061926; border-bottom: 1px solid #26354d;
-      padding: 12px 22px; display: flex; justify-content: space-between; align-items: center;
+      background: rgba(26, 29, 34, 0.94);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
     }
-    header h1 { font-size: 1.05rem; font-weight: 800; color: #f8fafc; }
-    header span { font-size: 0.76rem; color: var(--accent-blue); display: block; }
-    .nav-link {
-      background: #144869; color: #a8bfc8; text-decoration: none;
-      padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
-      border: 1px solid #4c7084;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .nav-link:hover { background: #4c7084; }
-
-    .container {
-      display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px;
-      padding: 18px 22px; flex: 1;
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all 0.2s ease;
     }
-    .panel {
-      background: var(--bg-panel); border: 1px solid var(--border);
-      border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 13px;
+    .dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
     }
-    .panel h2 { font-size: 0.9rem; text-transform: uppercase; color: var(--accent-blue); letter-spacing: 0.5px; }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    label { display: block; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
-    input[type="text"], input[type="number"], select, textarea {
-      width: 100%; background: var(--bg-card); color: var(--text-main);
-      border: 1px solid #4c7084; border-radius: 6px; padding: 8px 10px; font-size: 0.84rem;
+    .brand h1 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: 0.4px;
     }
-    input[type="range"] { width: 100%; accent-color: var(--accent-blue); cursor: pointer; }
-
-    .sensor-box {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px;
+    .brand small {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
     }
-    .sensor-header { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px; }
-    .g-badge { font-weight: 800; color: var(--accent-green); }
-    .g-badge.danger { color: var(--accent-red); }
-
-    .checkbox-row {
-      display: flex; align-items: center; gap: 10px; background: rgba(168, 85, 247, 0.12);
-      border: 1px solid rgba(168, 85, 247, 0.35); padding: 9px 12px; border-radius: 7px;
-      font-size: 0.82rem; color: #e9d5ff; cursor: pointer;
+    .nav-btn {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
     }
-    .checkbox-row input { width: 16px; height: 16px; accent-color: var(--accent-purple); }
-
-    .btn-group { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 4px; }
-    button {
-      cursor: pointer; border: none; border-radius: 7px; padding: 11px 14px;
-      font-size: 0.84rem; font-weight: 700; transition: filter 0.15s;
+    .nav-btn:hover {
+      border-color: var(--accent);
     }
-    button:hover { filter: brightness(1.12); }
-    .btn-send { background: linear-gradient(135deg, #b34c28, #5d312e); color: #fff; }
-    .btn-swarm { background: linear-gradient(135deg, #648697, #0f3d5a); color: #fff; }
-
-    #mini-map { height: 270px; width: 100%; border-radius: 8px; border: 1px solid #4c7084; }
-    .preset-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+    main {
+      max-width: 1220px;
+      margin: 20px auto;
+      padding: 0 16px 36px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+    }
+    @media (max-width: 920px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+    }
+    .card.alert-border {
+      border-color: rgba(255, 69, 0, 0.7);
+    }
+    .section-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent-soft);
+      margin-bottom: 6px;
+    }
+    .switch-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+    .switch-box.active {
+      border-color: var(--accent);
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 54px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #121417;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      transition: 0.25s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background: var(--text-steel);
+      border-radius: 50%;
+      transition: 0.25s;
+    }
+    input:checked + .slider {
+      background: var(--accent);
+      border-color: var(--accent-soft);
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+      background: #FFFFFF;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 560px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    label.field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-steel);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--bg-base);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
     .preset-btn {
-      background: var(--bg-card); color: #cbd5e1; border: 1px solid #4c7084;
-      padding: 5px 9px; font-size: 0.74rem; border-radius: 5px; font-weight: 600;
+      background: var(--bg-elevated);
+      color: var(--text-steel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
     }
-    .preset-btn:hover { border-color: var(--accent-blue); color: #fff; }
-
-    pre {
-      background: #061926; border: 1px solid #144869; border-radius: 8px;
-      padding: 12px; font-family: Consolas, monospace; font-size: 0.78rem;
-      color: #a8bfc8; overflow-x: auto; flex: 1; min-height: 170px;
+    .preset-btn:hover {
+      border-color: var(--accent);
+      color: var(--text-main);
+    }
+    #mapAdmin {
+      width: 100%;
+      height: 270px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+      align-items: center;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #FFFFFF;
+      border: 1px solid var(--accent-soft);
+      border-radius: 12px;
+      padding: 11px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-steel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .bitacora-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .bitacora-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 540px;
+      overflow-y: auto;
+    }
+    .evento-item {
+      background: var(--bg-base);
+      border: 1px solid rgba(255, 69, 0, 0.5);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .evento-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .badge {
+      background: rgba(255, 69, 0, 0.18);
+      color: var(--accent-soft);
+      border: 1px solid rgba(255, 69, 0, 0.7);
+      padding: 3px 9px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-msg {
+      font-size: 12px;
+      color: var(--accent-soft);
     }
   </style>
 </head>
 <body>
-
-<header>
-  <div>
-    <h1>PRUEBA DE REPORTES Y SENSORES — ALERTA CAYMA</h1>
-    <span>Prueba cómo se envían las emergencias desde un celular hacia el mapa central</span>
-  </div>
-  <a href="/panel-control" target="_blank" class="nav-link">Ver Mapa de Emergencias ↗</a>
-</header>
-
-<div class="container">
-  <!-- COLUMNA IZQUIERDA: CONTROLES DE PARAMETROS -->
-  <section class="panel">
-    <h2>1. Datos de la Emergencia y del Celular</h2>
-
-    <div class="grid-2">
+  <header>
+    <div class="brand">
+      <span id="statusDot" class="dot"></span>
       <div>
-        <label>Tipo de Incidente</label>
-        <select id="tipo" onchange="actualizarDescripcionBase()">
-          <option value="medica">Accidente Vehicular / Emergencia Médica</option>
-          <option value="sismo">Sismo / Colapso Estructural</option>
-          <option value="deslizamiento">Huaico / Desborde Torrentera</option>
-          <option value="incendio">Incendio Urbano / Forestal</option>
-          <option value="seguridad">Seguridad / Rescate Ciudadano</option>
-          <option value="sos_critico">SOS Crítico (Riesgo Vital)</option>
-        </select>
-      </div>
-      <div>
-        <label>Nombre o ID del Celular</label>
-        <input type="text" id="usuario_id" value="android_sensor_cayma_01" />
+        <h1>PANEL DE ADMINISTRADOR — ALERTA AREQUIPA</h1>
+        <small>Control centralizado de registro automatico de catastrofes y riesgos</small>
       </div>
     </div>
+    <a class="nav-btn" href="./index.html">Ver Mapa Principal</a>
+  </header>
 
-    <div>
-      <label>¿Qué está pasando? (Descripción del reporte)</label>
-      <textarea id="descripcion" rows="2">Colisión vehicular en Av. Cayma cerca a Torrentera Chullo, personas atrapadas requieren ambulancia</textarea>
-    </div>
+  <main>
+    <section id="cardControl" class="card">
+      <div class="section-tag">1. Interruptor Central de Catastrofe</div>
+      <h2 style="margin:0 0 6px 0;font-size:18px;">Activacion de Registro Automatico en RIESGOS</h2>
+      <p style="margin:0;font-size:13px;color:var(--text-muted);line-height:1.45;">
+        Mientras este interruptor este apagado, el sistema permanece en espera. En cuanto ocurra un terremoto o catastrofe y lo actives aqui, se comenzara a registrar todo con <strong>fecha y hora exactas</strong>, <strong>que ocurrio</strong>, <strong>donde ocurrio</strong> y <strong>coordenadas</strong>.
+      </p>
 
-    <!-- SLIDER DE ACELEROMETRO (IMPACTO / SISMO) -->
-    <div class="sensor-box">
-      <div class="sensor-header">
-        <span>Fuerza del golpe o temblor (Sensor de movimiento):</span>
-        <span id="g-val" class="g-badge">0.15 G (Reposo)</span>
-      </div>
-      <input type="range" id="g-slider" min="0" max="3.0" step="0.05" value="0.15" oninput="actualizarGForce(this.value)" />
-      <small style="color:var(--text-muted); font-size:0.72rem;">Si pasa de <b>1.35 G</b>, el celular envía la alerta solo sin tocar la pantalla.</small>
-    </div>
-
-    <!-- SLIDER DE BATERIA Y MODO MESH -->
-    <div class="grid-2">
-      <div class="sensor-box">
-        <div class="sensor-header">
-          <span>Batería del Teléfono:</span>
-          <b id="bat-val" style="color:var(--accent-blue);">75%</b>
-        </div>
-        <input type="range" id="bateria" min="1" max="100" value="75" oninput="document.getElementById('bat-val').textContent = this.value + '%'" />
-      </div>
-
-      <label class="checkbox-row">
-        <input type="checkbox" id="mesh_offline" />
+      <div id="switchBox" class="switch-box">
         <div>
-          <strong>Enviar sin Internet (Bluetooth cercano)</strong>
-          <div style="font-size:0.71rem; color:#c084fc;">Simular que no hay señal ni datos móviles</div>
+          <div id="switchTitle" style="font-size:15px;font-weight:700;">Modo Registro Catastrofe: APAGADO</div>
+          <div id="switchSub" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pulsa el indicador para iniciar la captura inmediata en Arequipa</div>
         </div>
-      </label>
-    </div>
-
-    <div class="btn-group">
-      <button class="btn-send" onclick="emitirAlertaControlada()">Enviar Reporte de Prueba</button>
-      <button class="btn-swarm" onclick="emitirEnjambre()">Simular 3 Vecinos Reportando a la Vez</button>
-    </div>
-  </section>
-
-  <!-- COLUMNA DERECHA: SELECTOR GPS EN MAPA Y RESPUESTA JSON -->
-  <section class="panel">
-    <h2>2. Ubicación en Cayma (Haz clic en el mapa o elige un lugar)</h2>
-
-    <div class="preset-bar">
-      <button class="preset-btn" onclick="fijarPunto(-16.3425, -71.5467)">Plaza de Cayma</button>
-      <button class="preset-btn" onclick="fijarPunto(-16.3642, -71.5476)">Torrentera Chullo</button>
-      <button class="preset-btn" onclick="fijarPunto(-16.3518, -71.5472)">Av. Cayma / Acequia Alta</button>
-      <button class="preset-btn" onclick="fijarPunto(-16.3740, -71.5318)">Límite Alto Selva Alegre</button>
-    </div>
-
-    <div id="mini-map"></div>
-
-    <div class="grid-2">
-      <div>
-        <label>Latitud GPS</label>
-        <input type="number" id="lat" step="0.0001" value="-16.3518" onchange="moverMarcadorDesdeInputs()" />
+        <label class="switch" title="Activar o desactivar registro catastrofico">
+          <input id="adminSwitch" type="checkbox" />
+          <span class="slider"></span>
+        </label>
       </div>
-      <div>
-        <label>Longitud GPS</label>
-        <input type="number" id="lng" step="0.0001" value="-71.5472" onchange="moverMarcadorDesdeInputs()" />
+
+      <div class="grid-2">
+        <div>
+          <label class="field-label" for="tipoCatastrofe">Tipo de Evento / Catastrofe</label>
+          <select id="tipoCatastrofe">
+            <option value="TERREMOTO">Terremoto / Sismo Mayor</option>
+            <option value="DESBORDE TORRENTERA">Desborde de Torrentera / Huaico</option>
+            <option value="ERUPCION / LAHAR">Actividad Volcanica / Lahar</option>
+            <option value="COLAPSO VIAL">Colapso Vial / Puente Bloqueado</option>
+            <option value="EMERGENCIA MASIVA">Emergencia Civil Masiva</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="zonaArequipa">Distrito / Sector en Arequipa</label>
+          <input id="zonaArequipa" type="text" value="Arequipa Metropolitana — Cercado" placeholder="Ej. Alto Selva Alegre, Cayma, Yanahuara" />
+        </div>
       </div>
-    </div>
 
-    <div>
-      <label>Confirmación del Sistema Central</label>
-      <pre id="json-output">// Ajusta los parámetros y pulsa "Enviar Reporte de Prueba"...</pre>
-    </div>
-  </section>
-</div>
+      <div style="margin-top:10px;">
+        <label class="field-label" for="detalleEvento">Que ocurrio (Descripcion oficial del evento)</label>
+        <textarea id="detalleEvento" rows="2" placeholder="Ej. Sismo de fuerte intensidad percibido en toda Arequipa; activar rutas de evacuacion y registro de danos."></textarea>
+      </div>
 
-<script>
-  const miniMap = L.map('mini-map').setView([-16.3518, -71.5472], 14);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(miniMap);
+      <div class="actions-row">
+        <button id="btnRegistrarAhora" type="button" class="btn-primary">Activar y Registrar Evento Ahora</button>
+        <button id="btnExportarJson" type="button" class="btn-secondary">Exportar Bitacora JSON</button>
+        <span id="statusSync" class="status-msg"></span>
+      </div>
 
-  let pin = L.marker([-16.3518, -71.5472], { draggable: true }).addTo(miniMap);
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />
 
-  pin.on('dragend', () => {
-    const pos = pin.getLatLng();
-    document.getElementById('lat').value = pos.lat.toFixed(5);
-    document.getElementById('lng').value = pos.lng.toFixed(5);
-  });
+      <div class="section-tag">2. Ubicacion del Epicentro / Zona Afectada</div>
+      <div class="presets">
+        <button type="button" class="preset-btn" data-lat="-16.39889" data-lng="-71.53694" data-zona="Cercado — Plaza de Armas Arequipa">Cercado Arequipa</button>
+        <button type="button" class="preset-btn" data-lat="-16.37450" data-lng="-71.52200" data-zona="Alto Selva Alegre — Parte Alta / Torrentera">Alto Selva Alegre</button>
+        <button type="button" class="preset-btn" data-lat="-16.35180" data-lng="-71.54720" data-zona="Cayma — Torrentera El Chullo">Cayma / Chullo</button>
+        <button type="button" class="preset-btn" data-lat="-16.41520" data-lng="-71.56400" data-zona="Quebrada Anashuayco / Via Evitamiento">Anashuayco</button>
+      </div>
+      <div id="mapAdmin"></div>
+      <div class="grid-2">
+        <div>
+          <label class="field-label" for="latInput">Latitud</label>
+          <input id="latInput" type="text" value="-16.39889" />
+        </div>
+        <div>
+          <label class="field-label" for="lngInput">Longitud</label>
+          <input id="lngInput" type="text" value="-71.53694" />
+        </div>
+      </div>
+    </section>
 
-  miniMap.on('click', (e) => {
-    fijarPunto(e.latlng.lat, e.latlng.lng);
-  });
+    <section class="card">
+      <div class="bitacora-header">
+        <div>
+          <div class="section-tag">3. Bitacora Oficial (Reflejada en RIESGOS)</div>
+          <h2 style="margin:0;font-size:18px;">Eventos Registrados</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="badgeContador" class="badge">0 REGISTROS</span>
+          <button id="btnLimpiar" type="button" class="btn-secondary" style="padding:6px 10px;font-size:12px;">Limpiar</button>
+        </div>
+      </div>
+      <p style="margin:0 0 12px 0;font-size:12px;color:var(--text-muted);">
+        Cada registro guarda la marca temporal exacta, naturaleza del evento, ubicacion y coordenadas georeferenciadas.
+      </p>
+      <div id="listaBitacora" class="bitacora-list"></div>
+    </section>
+  </main>
 
-  function fijarPunto(lat, lng) {
-    document.getElementById('lat').value = Number(lat).toFixed(5);
-    document.getElementById('lng').value = Number(lng).toFixed(5);
-    pin.setLatLng([lat, lng]);
-    miniMap.panTo([lat, lng]);
-  }
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      const KEY_ACTIVO = "alerta_aqp_admin_catastrofe_activo";
+      const KEY_LISTA = "alerta_aqp_admin_catastrofe_eventos";
 
-  function moverMarcadorDesdeInputs() {
-    const lat = parseFloat(document.getElementById('lat').value);
-    const lng = parseFloat(document.getElementById('lng').value);
-    if (!isNaN(lat) && !isNaN(lng)) {
-      pin.setLatLng([lat, lng]);
-      miniMap.panTo([lat, lng]);
-    }
-  }
+      const adminSwitch = document.getElementById("adminSwitch");
+      const switchBox = document.getElementById("switchBox");
+      const switchTitle = document.getElementById("switchTitle");
+      const switchSub = document.getElementById("switchSub");
+      const statusDot = document.getElementById("statusDot");
+      const cardControl = document.getElementById("cardControl");
 
-  function actualizarGForce(val) {
-    const g = parseFloat(val);
-    const badge = document.getElementById('g-val');
-    if (g > 1.35) {
-      badge.textContent = `${g.toFixed(2)} G (ENVÍO AUTOMÁTICO POR GOLPE/TEMBLOR)`;
-      badge.classList.add('danger');
-      document.getElementById('tipo').value = 'sismo';
-      document.getElementById('descripcion').value = `Impacto / sacudida fuerte detectada por acelerómetro móvil (${g.toFixed(2)} G)`;
-    } else {
-      badge.textContent = `${g.toFixed(2)} G (Normal)`;
-      badge.classList.remove('danger');
-    }
-  }
+      const tipoEl = document.getElementById("tipoCatastrofe");
+      const zonaEl = document.getElementById("zonaArequipa");
+      const detalleEl = document.getElementById("detalleEvento");
+      const latEl = document.getElementById("latInput");
+      const lngEl = document.getElementById("lngInput");
+      const statusSync = document.getElementById("statusSync");
+      const listaEl = document.getElementById("listaBitacora");
+      const badgeContador = document.getElementById("badgeContador");
 
-  function actualizarDescripcionBase() {
-    const ejemplos = {
-      medica: "Colisión vehicular en Av. Cayma cerca a Torrentera Chullo, personas atrapadas requieren ambulancia",
-      sismo: "Movimiento telúrico fuerte percibido en Cayma, caída de mampostería",
-      deslizamiento: "Incremento brusco de caudal y lodo en torrentera, riesgo de desborde",
-      incendio: "Fuego activo y humo denso en inmueble urbano, riesgo de propagación",
-      seguridad: "Persona atrapada en zona de difícil acceso, requiere rescate",
-      sos_critico: "Emergencia crítica con riesgo vital inmediato, solicito auxilio urgente"
-    };
-    const tipo = document.getElementById('tipo').value;
-    document.getElementById('descripcion').value = ejemplos[tipo] || "";
-  }
+      const map = L.map("mapAdmin").setView([-16.39889, -71.53694], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+      let marker = L.marker([-16.39889, -71.53694], { draggable: true }).addTo(map);
 
-  async function enviarPaquete(payload) {
-    const resp = await fetch('/api/v1/alertas/sos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return await resp.json();
-  }
+      function moverPin(lat, lng) {
+        latEl.value = Number(lat).toFixed(5);
+        lngEl.value = Number(lng).toFixed(5);
+        marker.setLatLng([lat, lng]);
+        map.panTo([lat, lng]);
+      }
 
-  async function emitirAlertaControlada() {
-    const out = document.getElementById('json-output');
-    out.textContent = "Transmitiendo paquete al backend...";
+      map.on("click", (e) => moverPin(e.latlng.lat, e.latlng.lng));
+      marker.on("dragend", () => {
+        const p = marker.getLatLng();
+        moverPin(p.lat, p.lng);
+      });
 
-    const payload = {
-      usuario_id: document.getElementById('usuario_id').value,
-      latitud: parseFloat(document.getElementById('lat').value),
-      longitud: parseFloat(document.getElementById('lng').value),
-      tipo: document.getElementById('tipo').value,
-      descripcion: document.getElementById('descripcion').value,
-      nivel_bateria: parseInt(document.getElementById('bateria').value, 10),
-      origen_offline_mesh: document.getElementById('mesh_offline').checked
-    };
+      document.querySelectorAll(".preset-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const lat = parseFloat(btn.dataset.lat);
+          const lng = parseFloat(btn.dataset.lng);
+          zonaEl.value = btn.dataset.zona;
+          moverPin(lat, lng);
+        });
+      });
 
-    try {
-      const data = await enviarPaquete(payload);
-      out.textContent = JSON.stringify(data, null, 2);
-    } catch (e) {
-      out.textContent = "Error de conexión: " + e;
-    }
-  }
+      function ahoraFormateado() {
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, "0");
+        return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+      }
 
-  async function emitirEnjambre() {
-    const out = document.getElementById('json-output');
-    out.textContent = "Emitiendo ráfaga de 3 testigos cercanos (< 250m) para correlación IA...";
-    const baseLat = parseFloat(document.getElementById('lat').value);
-    const baseLng = parseFloat(document.getElementById('lng').value);
+      function leerEventos() {
+        try {
+          return JSON.parse(localStorage.getItem(KEY_LISTA) || "[]");
+        } catch (_) {
+          return [];
+        }
+      }
 
-    const resultados = [];
-    for (let i = 1; i <= 3; i++) {
-      const payload = {
-        usuario_id: `testigo_cercano_0${i}`,
-        latitud: baseLat + (i * 0.0004),
-        longitud: baseLng - (i * 0.0003),
-        tipo: document.getElementById('tipo').value,
-        descripcion: document.getElementById('descripcion').value + ` (Reporte testigo #${i})`,
-        nivel_bateria: 80 - (i * 12),
-        origen_offline_mesh: i === 3
-      };
-      resultados.push(await enviarPaquete(payload));
-    }
-    out.textContent = JSON.stringify({
-      prueba: "CORRELACION_ENJAMBRE_COMPLETADA",
-      ultimo_registro: resultados[resultados.length - 1]
-    }, null, 2);
-  }
-</script>
+      function guardarEventos(arr) {
+        localStorage.setItem(KEY_LISTA, JSON.stringify(arr));
+      }
+
+      function pintarEstado(activo) {
+        localStorage.setItem(KEY_ACTIVO, activo ? "1" : "0");
+        switchTitle.textContent = activo
+          ? "Modo Registro Catastrofe: ACTIVO"
+          : "Modo Registro Catastrofe: APAGADO";
+        switchSub.textContent = activo
+          ? "Capturando automaticamente fecha, hora, evento y coordenadas desde este momento"
+          : "Pulsa el indicador para iniciar la captura inmediata en Arequipa";
+        switchBox.classList.toggle("active", activo);
+        statusDot.classList.toggle("active", activo);
+        cardControl.classList.toggle("alert-border", activo);
+      }
+
+      function renderBitacora() {
+        const eventos = leerEventos();
+        badgeContador.textContent = `${eventos.length} REGISTRO(S)`;
+        if (!eventos.length) {
+          listaEl.innerHTML = `<div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">Aun no hay catastrofes registradas. Activa el interruptor cuando ocurra un evento para iniciar el historial automatico.</div>`;
+          return;
+        }
+        listaEl.innerHTML = eventos.map((ev) => `
+          <article class="evento-item">
+            <div class="evento-top">
+              <span class="badge">${ev.tipo}</span>
+              <span style="font-size:12px;color:#D1D5DB;font-weight:600;">${ev.fechaHora}</span>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:#F3F4F6;margin-bottom:4px;">Que ocurrio: ${ev.queOcurrio}</div>
+            <div style="font-size:13px;color:#D1D5DB;margin-bottom:4px;">Donde ocurrio: ${ev.dondeOcurrio}</div>
+            <div style="font-size:11px;color:#9CA3AF;">Coordenadas: ${ev.coordenadas}</div>
+          </article>
+        `).join("");
+      }
+
+      async function sincronizarServidor(activo, evento) {
+        const origin = window.location.origin || "";
+        if (!origin.startsWith("http") || origin.includes("github.io")) {
+          statusSync.textContent = "Estado guardado en consola web (GitHub Pages).";
+          return;
+        }
+        try {
+          await fetch(`${origin}/api/sos/catastrofe/estado`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ activo, evento })
+          });
+          statusSync.textContent = "Sincronizado con backend FastAPI.";
+        } catch (_) {
+          statusSync.textContent = "Guardado en consola local.";
+        }
+      }
+
+      function registrarEvento(activarSiApagado) {
+        if (activarSiApagado && !adminSwitch.checked) {
+          adminSwitch.checked = true;
+          pintarEstado(true);
+        }
+        if (!adminSwitch.checked) return;
+
+        const eventos = leerEventos();
+        const nuevo = {
+          id: "cat_" + Date.now(),
+          fechaHora: ahoraFormateado(),
+          tipo: tipoEl.value,
+          queOcurrio: (detalleEl.value || "").trim() || `Activacion de alerta por ${tipoEl.value} desde consola de administrador.`,
+          dondeOcurrio: (zonaEl.value || "").trim() || "Arequipa Metropolitana",
+          coordenadas: `${latEl.value}, ${lngEl.value}`
+        };
+        eventos.unshift(nuevo);
+        guardarEventos(eventos);
+        detalleEl.value = "";
+        renderBitacora();
+        sincronizarServidor(true, nuevo);
+      }
+
+      const activoInicial = localStorage.getItem(KEY_ACTIVO) === "1";
+      adminSwitch.checked = activoInicial;
+      pintarEstado(activoInicial);
+      renderBitacora();
+
+      adminSwitch.addEventListener("change", () => {
+        pintarEstado(adminSwitch.checked);
+        if (adminSwitch.checked) {
+          registrarEvento(false);
+        } else {
+          sincronizarServidor(false, null);
+        }
+      });
+
+      document.getElementById("btnRegistrarAhora").addEventListener("click", () => registrarEvento(true));
+
+      document.getElementById("btnLimpiar").addEventListener("click", () => {
+        guardarEventos([]);
+        renderBitacora();
+        statusSync.textContent = "Bitacora reiniciada.";
+      });
+
+      document.getElementById("btnExportarJson").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(leerEventos(), null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bitacora_catastrofes_arequipa.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    })();
+  </script>
 </body>
 </html>
