@@ -4208,5 +4208,19 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   setInterval(init, 2500);
 })();
 </script>
+<script>
+(function removerPestanaIAEnWeb() {
+  function limpiar() {
+    document.getElementById('cafqTabIA')?.remove();
+    document.getElementById('cafqSeccionIALuna')?.remove();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', limpiar);
+  } else {
+    limpiar();
+  }
+  setTimeout(limpiar, 300);
+})();
+</script>
 </body>
 </html>
