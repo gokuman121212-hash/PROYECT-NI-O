@@ -2229,5 +2229,127 @@ async function simularAlertaAdmin() {
   };
 })();
 </script>
+<script>
+(function ajusteRegistroContinuoYMensajeSimulador() {
+  const CLAVE_SIM_PERM = 'alertacayma_simulaciones_permanentes_v1';
+  const CLAVE_SIM_STATS = 'alertacayma_simulador_alertas_v1';
+
+  function ocultarBotonesIniciarDetener() {
+    const btnIni = document.getElementById('btnIniciarSimStats');
+    const btnDet = document.getElementById('btnDetenerSimStats');
+    if (btnIni) btnIni.style.display = 'none';
+    if (btnDet) btnDet.style.display = 'none';
+
+    const badge = document.getElementById('simStatsEstadoBadge');
+    if (badge) {
+      badge.textContent = 'ACTIVO CONTINUO (Permanente)';
+      badge.style.background = 'rgba(34,197,94,0.18)';
+      badge.style.color = '#4ADE80';
+    }
+    const msg = document.getElementById('simStatsMensaje');
+    if (msg) {
+      msg.textContent = 'Registro continuo activo y graficándose en tiempo real sin necesidad de iniciar ni detener manualmente.';
+    }
+  }
+
+  function leerLista(clave) {
+    try {
+      const raw = localStorage.getItem(clave);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function guardarEnLista(clave, item) {
+    const arr = leerLista(clave);
+    arr.push(item);
+    try {
+      localStorage.setItem(clave, JSON.stringify(arr));
+    } catch (_) {}
+    return arr.length;
+  }
+
+  // Asegurar registro continuo automático si existe iniciarRegistroSimuladorStats
+  if (typeof window.iniciarRegistroSimuladorStats === 'function' && !window._autoContinuoIniciado) {
+    window._autoContinuoIniciado = true;
+    try { window.iniciarRegistroSimuladorStats(); } catch (_) {}
+  }
+
+  // Reemplazar simularAlertaAdmin para que siempre quede guardado y sin mensaje de backend caído al final
+  window.simularAlertaAdmin = async function() {
+    const tipo = document.getElementById('simAlertaTipo')?.value || 'sismo';
+    const distrito = document.getElementById('simAlertaDistrito')?.value || 'Cayma';
+    const desc = document.getElementById('simAlertaDesc')?.value || `Simulación de ${tipo} en ${distrito}`;
+    const estadoEl = document.getElementById('simAlertaEstado');
+    const baseUrl = (document.getElementById('simStatsBackendUrl')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+
+    const ahoraIso = new Date().toISOString();
+    const idLocal = `sim_perm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    let backendOk = false;
+
+    try {
+      const ctrl = new AbortController();
+      const tId = setTimeout(() => ctrl.abort(), 1500);
+      const res = await fetch(`${baseUrl}/api/v1/alertas/sos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          usuario_id: 'sim_admin_perm',
+          nombre_usuario: 'Simulación Admin',
+          distrito: distrito,
+          sector_referencia: distrito,
+          latitud: -16.3820 + ((Math.random() - 0.5) * 0.012),
+          longitud: -71.5450 + ((Math.random() - 0.5) * 0.012),
+          tipo: tipo,
+          descripcion: desc,
+          nivel_bateria: 100,
+          origen_offline_mesh: false,
+          es_simulacion: true
+        })
+      });
+      clearTimeout(tId);
+      if (res.ok) backendOk = true;
+    } catch (_) {}
+
+    const evento = {
+      alerta_id: idLocal,
+      tipo: tipo,
+      distrito: distrito,
+      descripcion: desc,
+      timestamp: ahoraIso,
+      es_simulacion: true
+    };
+
+    const totalPerm = guardarEnLista(CLAVE_SIM_PERM, evento);
+    guardarEnLista(CLAVE_SIM_STATS, evento);
+
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+
+    if (estadoEl) {
+      estadoEl.textContent = backendOk
+        ? `Alerta simulada (${idLocal}) registrada en backend y guardada permanentemente (${totalPerm} total).`
+        : `Alerta simulada (${idLocal}) guardada permanentemente en el navegador (${totalPerm} total) — modo autónomo sin uvicorn.`;
+    }
+  };
+
+  function runInit() {
+    ocultarBotonesIniciarDetener();
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runInit);
+  } else {
+    runInit();
+  }
+})();
+</script>
 </body>
 </html>
