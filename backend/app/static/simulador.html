@@ -3307,5 +3307,182 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   }
 })();
 </script>
+<!-- Paleta LUNA (#A7EBF2, #54ACBF, #26658C, #023859, #011C40) aplicada a toda la interfaz -->
+<style id="cafqPaletaLunaUnificada">
+  :root {
+    --luna-ice: #A7EBF2;
+    --luna-aqua: #54ACBF;
+    --luna-steel: #26658C;
+    --luna-navy: #023859;
+    --luna-abyss: #011C40;
+  }
+
+  html, body {
+    background:
+      radial-gradient(circle at 15% 10%, rgba(84, 172, 191, 0.22), transparent 42%),
+      radial-gradient(circle at 85% 15%, rgba(38, 101, 140, 0.28), transparent 45%),
+      linear-gradient(180deg, var(--luna-abyss) 0%, #01132b 100%) !important;
+    color: var(--luna-ice) !important;
+  }
+
+  .stats-card,
+  section,
+  .cafq-admin-action-bar,
+  #simContenedorPlanosDinamicos > div,
+  #simContenedorPlanosDinamicos > div > div {
+    background-color: rgba(2, 56, 89, 0.42) !important;
+    border-color: rgba(84, 172, 191, 0.32) !important;
+  }
+
+  input, select, textarea {
+    background-color: rgba(1, 28, 64, 0.85) !important;
+    color: var(--luna-ice) !important;
+    border-color: rgba(84, 172, 191, 0.45) !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: rgba(167, 235, 242, 0.55) !important;
+  }
+
+  /* Unificar todos los botones y variantes animadas con la paleta LUNA */
+  button,
+  .cafq-uiverse-btn,
+  .cafq-page-anim-btn,
+  .cafq-theme-btn-cyan,
+  .cafq-theme-btn-flow,
+  .cafq-theme-btn-create,
+  .cafq-theme-pill-zone {
+    background: linear-gradient(135deg, var(--luna-navy), var(--luna-steel)) !important;
+    color: var(--luna-ice) !important;
+    border-color: rgba(167, 235, 242, 0.45) !important;
+    box-shadow: 0 0 0 1.5px rgba(84, 172, 191, 0.55), 0 6px 16px rgba(1, 28, 64, 0.55) !important;
+  }
+
+  button:hover,
+  .cafq-uiverse-btn:hover,
+  .cafq-page-anim-btn:hover,
+  .cafq-theme-btn-cyan:hover,
+  .cafq-theme-btn-flow:hover,
+  .cafq-theme-btn-create:hover,
+  .cafq-theme-pill-zone:hover {
+    background: linear-gradient(135deg, var(--luna-aqua), var(--luna-ice)) !important;
+    color: var(--luna-abyss) !important;
+    border-color: var(--luna-ice) !important;
+    box-shadow: 0 0 18px rgba(167, 235, 242, 0.45) !important;
+  }
+
+  button svg,
+  .cafq-uiverse-btn svg,
+  .cafq-page-anim-btn svg {
+    fill: var(--luna-ice) !important;
+    stroke: var(--luna-ice) !important;
+  }
+
+  button:hover svg,
+  .cafq-uiverse-btn:hover svg,
+  .cafq-page-anim-btn:hover svg {
+    fill: var(--luna-abyss) !important;
+    stroke: var(--luna-abyss) !important;
+  }
+
+  .cafq-page-anim-btn.is-active-tab,
+  #adminSubnav .admin-subnav-btn.active {
+    background: linear-gradient(135deg, var(--luna-aqua), var(--luna-ice)) !important;
+    color: var(--luna-abyss) !important;
+    border-color: var(--luna-ice) !important;
+    box-shadow: 0 0 20px rgba(167, 235, 242, 0.5) !important;
+  }
+
+  .cafq-page-anim-btn.is-active-tab svg,
+  #adminSubnav .admin-subnav-btn.active svg {
+    fill: var(--luna-abyss) !important;
+    stroke: var(--luna-abyss) !important;
+  }
+
+  .cafq-uiverse-btn .cafq-uiverse-circle,
+  .cafq-page-anim-btn .cafq-btn-circle,
+  .cafq-theme-btn-cyan .cafq-cyan-circle {
+    background-color: var(--luna-ice) !important;
+  }
+</style>
+
+<script>
+(function aplicarPaletaLunaDinamica() {
+  const PALETA = {
+    ice: '#A7EBF2',
+    aqua: '#54ACBF',
+    steel: '#26658C',
+    navy: '#023859',
+    abyss: '#011C40'
+  };
+
+  function recolorearSvgPlanos() {
+    const mapaIds = {
+      simPlanoSegundoGrande: PALETA.ice,
+      simPlanoHora: PALETA.aqua,
+      simPlanoDia: '#7ED8E6',
+      simPlanoSemana: PALETA.aqua,
+      simPlanoMes: '#68B8CF',
+      simPlanoAnual: PALETA.ice
+    };
+
+    Object.entries(mapaIds).forEach(([id, color]) => {
+      const box = document.getElementById(id);
+      if (!box) return;
+      box.querySelectorAll('svg').forEach(svg => {
+        svg.style.background = PALETA.abyss;
+        svg.style.borderColor = PALETA.steel;
+        svg.querySelectorAll('polyline').forEach(pl => pl.setAttribute('stroke', color));
+        svg.querySelectorAll('polygon').forEach(pg => pg.setAttribute('fill', color));
+        svg.querySelectorAll('circle').forEach(ci => {
+          const r = parseFloat(ci.getAttribute('r') || '0');
+          if (r >= 2 && r <= 6) {
+            ci.setAttribute('fill', color);
+            ci.setAttribute('stroke', PALETA.abyss);
+          }
+        });
+      });
+    });
+
+    const tooltip = document.getElementById('simTooltipFlotante');
+    if (tooltip) {
+      tooltip.style.background = PALETA.abyss;
+      tooltip.style.borderColor = PALETA.aqua;
+      tooltip.style.color = PALETA.ice;
+    }
+  }
+
+  function limpiarEstilosInlineConflictivos() {
+    document.querySelectorAll('button').forEach(btn => {
+      btn.style.background = '';
+      btn.style.backgroundColor = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    });
+  }
+
+  const origRender = window.renderizarPlanosSimulador;
+  if (typeof origRender === 'function' && !origRender._lunaWrap) {
+    const wrapped = function() {
+      origRender();
+      recolorearSvgPlanos();
+    };
+    wrapped._lunaWrap = true;
+    window.renderizarPlanosSimulador = wrapped;
+  }
+
+  function run() {
+    limpiarEstilosInlineConflictivos();
+    recolorearSvgPlanos();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(run, 150));
+  } else {
+    setTimeout(run, 150);
+  }
+  setInterval(recolorearSvgPlanos, 1200);
+})();
+</script>
 </body>
 </html>
