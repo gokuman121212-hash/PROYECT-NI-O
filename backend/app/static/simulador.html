@@ -529,39 +529,66 @@
       Listo para iniciar cuando tú lo indiques.
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
-      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <strong style="font-size:14px;color:#F9FAFB;">Estadística del Día</strong>
-          <span id="simCountDia" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
-        </div>
-        <div id="simPlanoDia"></div>
-      </div>
+    <div id="simContenedorPlanosDinamicos">
+  <div id="simTooltipFlotante" style="position:fixed;pointer-events:none;z-index:9999;display:none;background:#0B0D10;border:1px solid #3B4252;color:#F9FAFB;padding:8px 10px;border-radius:8px;font-size:11px;box-shadow:0 8px 20px rgba(0,0,0,0.5);max-width:270px;"></div>
 
-      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <strong style="font-size:14px;color:#F9FAFB;">Estadística de la Semana</strong>
-          <span id="simCountSemana" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
-        </div>
-        <div id="simPlanoSemana"></div>
+  <div style="padding:16px;border-radius:12px;background:#121417;border:1px solid #2F3540;margin-bottom:14px;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+      <div>
+        <strong style="font-size:15px;color:#F9FAFB;">Monitor Principal Segundo a Segundo (Movimiento en Vivo)</strong>
+        <div style="font-size:12px;color:#9CA3AF;">Avanza cada segundo y marca cada alerta o problema que ocurre al instante.</div>
       </div>
-
-      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <strong style="font-size:14px;color:#F9FAFB;">Estadística del Mes</strong>
-          <span id="simCountMes" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
-        </div>
-        <div id="simPlanoMes"></div>
-      </div>
-
-      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <strong style="font-size:14px;color:#F9FAFB;">Estadística Anual</strong>
-          <span id="simCountAnual" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
-        </div>
-        <div id="simPlanoAnual"></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:#9CA3AF;">Reloj vivo: <strong id="simRelojSegundo" style="color:#38BDF8;">--:--:--</strong></span>
+        <span id="simCountSegundo" style="padding:3px 10px;border-radius:999px;background:rgba(56,189,248,0.15);color:#38BDF8;font-weight:700;font-size:12px;">0 eventos (60s)</span>
       </div>
     </div>
+    <div id="simPlanoSegundoGrande"></div>
+    <div id="simBitacoraSegundo" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:76px;overflow-y:auto;"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;">
+    <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:14px;color:#F9FAFB;">Estadística Hora por Hora</strong>
+        <span id="simCountHora" style="font-size:12px;font-weight:700;color:#FBBF24;">0</span>
+      </div>
+      <div id="simPlanoHora"></div>
+    </div>
+
+    <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:14px;color:#F9FAFB;">Estadística del Día</strong>
+        <span id="simCountDia" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+      </div>
+      <div id="simPlanoDia"></div>
+    </div>
+
+    <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:14px;color:#F9FAFB;">Estadística de la Semana</strong>
+        <span id="simCountSemana" style="font-size:12px;font-weight:700;color:#38BDF8;">0</span>
+      </div>
+      <div id="simPlanoSemana"></div>
+    </div>
+
+    <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:14px;color:#F9FAFB;">Estadística del Mes</strong>
+        <span id="simCountMes" style="font-size:12px;font-weight:700;color:#A78BFA;">0</span>
+      </div>
+      <div id="simPlanoMes"></div>
+    </div>
+
+    <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:14px;color:#F9FAFB;">Estadística Anual</strong>
+        <span id="simCountAnual" style="font-size:12px;font-weight:700;color:#34D399;">0</span>
+      </div>
+      <div id="simPlanoAnual"></div>
+    </div>
+  </div>
+</div>
   </div>
 </section>
 
@@ -1568,6 +1595,579 @@ async function simularAlertaAdmin() {
     const activo = document.querySelector('#adminSubnav .admin-subnav-btn.active')?.dataset?.target || 'panel';
     actualizarVisibilidad(activo);
   });
+})();
+</script>
+<script>
+(function potenciarPlanosInteractivosSimulador() {
+  const STORAGE_KEY = 'alertacayma_simulador_alertas_v1';
+  let tickerSegundoVivo = null;
+
+  function leerEventos() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function mostrarTooltip(evt, titulo, detalle) {
+    const tip = document.getElementById('simTooltipFlotante');
+    if (!tip) return;
+    tip.innerHTML = `<div style="font-weight:700;margin-bottom:2px;color:#F9FAFB;">${titulo}</div><div style="color:#CBD5E1;">${detalle}</div>`;
+    tip.style.display = 'block';
+    const offsetX = 14;
+    const offsetY = 14;
+    const x = Math.min(window.innerWidth - 275, Math.max(8, evt.clientX + offsetX));
+    const y = Math.min(window.innerHeight - 90, Math.max(8, evt.clientY + offsetY));
+    tip.style.left = `${x}px`;
+    tip.style.top = `${y}px`;
+  }
+
+  function ocultarTooltip() {
+    const tip = document.getElementById('simTooltipFlotante');
+    if (tip) tip.style.display = 'none';
+  }
+
+  window.simMoverPunto = function(evt, titulo, detalle) {
+    mostrarTooltip(evt, decodeURIComponent(titulo), decodeURIComponent(detalle));
+  };
+
+  window.simSalirPunto = function() {
+    ocultarTooltip();
+  };
+
+  function construirSvgInteractivo(items, colorHex, altoSvg, anchoSvg) {
+    const w = anchoSvg || 300;
+    const h = altoSvg || 135;
+    const padX = 18;
+    const padTop = 14;
+    const padBot = 24;
+    const plotH = h - padTop - padBot;
+    const maxVal = Math.max(1, ...items.map(it => it.valor));
+    const n = Math.max(1, items.length);
+    const stepX = (w - padX * 2) / Math.max(1, n - 1);
+
+    const pts = items.map((it, idx) => {
+      const x = n === 1 ? w / 2 : padX + idx * stepX;
+      const y = padTop + plotH - (it.valor / maxVal) * plotH;
+      return { ...it, x, y };
+    });
+
+    const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const areaPts = pts.length
+      ? `${pts[0].x.toFixed(1)},${(padTop + plotH).toFixed(1)} ` + polyline + ` ${pts[pts.length - 1].x.toFixed(1)},${(padTop + plotH).toFixed(1)}`
+      : '';
+
+    const gridLines = [0, 0.5, 1].map(frac => {
+      const gy = padTop + plotH - frac * plotH;
+      return `<line x1="${padX}" y1="${gy.toFixed(1)}" x2="${w - padX}" y2="${gy.toFixed(1)}" stroke="#1E2430" stroke-dasharray="3,3" stroke-width="1" />`;
+    }).join('');
+
+    const hotspots = pts.map(p => {
+      const tEnc = encodeURIComponent(`${p.etiqueta} — ${p.valor} alerta(s)`);
+      const dEnc = encodeURIComponent(p.detalle || `Total exacto: ${p.valor}`);
+      const radio = p.valor > 0 ? 4.5 : 3;
+      const fillC = p.valor > 0 ? colorHex : '#4B5563';
+      return `
+        <g style="cursor:pointer;"
+           onmousemove="simMoverPunto(event, '${tEnc}', '${dEnc}')"
+           onmouseleave="simSalirPunto()">
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9" fill="transparent" />
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${radio}" fill="${fillC}" stroke="#0E1013" stroke-width="1.2" />
+        </g>
+      `;
+    }).join('');
+
+    const stepEtiqueta = Math.max(1, Math.floor(pts.length / 5));
+    const labels = pts.filter((_, i) => i === 0 || i === pts.length - 1 || i % stepEtiqueta === 0).map(p =>
+      `<text x="${p.x.toFixed(1)}" y="${h - 6}" fill="#9CA3AF" font-size="9" text-anchor="middle">${p.etiqueta}</text>`
+    ).join('');
+
+    return `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" style="display:block;background:#0E1013;border-radius:8px;border:1px solid #232832;">
+        ${gridLines}
+        <line x1="${padX}" y1="${padTop + plotH}" x2="${w - padX}" y2="${padTop + plotH}" stroke="#2F3540" stroke-width="1" />
+        ${areaPts ? `<polygon points="${areaPts}" fill="${colorHex}" fill-opacity="0.16" />` : ''}
+        ${pts.length > 1 ? `<polyline fill="none" stroke="${colorHex}" stroke-width="2.2" points="${polyline}" />` : ''}
+        ${labels}
+        ${hotspots}
+      </svg>
+    `;
+  }
+
+  window.renderizarPlanosSimulador = function() {
+    const eventos = leerEventos();
+    const ahora = new Date();
+    const relojEl = document.getElementById('simRelojSegundo');
+    if (relojEl) relojEl.textContent = ahora.toLocaleTimeString('es-PE', { hour12: false });
+
+    const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    const inicioSemana = new Date(inicioDia);
+    inicioSemana.setDate(inicioDia.getDate() - 6);
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+    const hace60Seg = new Date(ahora.getTime() - 60000);
+
+    // 0. Segundo a segundo (últimos 60 segundos)
+    const itemsSegundo = [];
+    let total60s = 0;
+    const eventos60s = [];
+    for (let s = 59; s >= 0; s--) {
+      const slotDate = new Date(ahora.getTime() - s * 1000);
+      const secKey = slotDate.getHours() * 3600 + slotDate.getMinutes() * 60 + slotDate.getSeconds();
+      const coinciden = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        if (isNaN(ts.getTime()) || ts < hace60Seg || ts > ahora) return false;
+        const k = ts.getHours() * 3600 + ts.getMinutes() * 60 + ts.getSeconds();
+        return k === secKey;
+      });
+      if (coinciden.length > 0) {
+        total60s += coinciden.length;
+        coinciden.forEach(c => eventos60s.push({ ...c, _ts: new Date(c.timestamp) }));
+      }
+      const hh = String(slotDate.getHours()).padStart(2, '0');
+      const mm = String(slotDate.getMinutes()).padStart(2, '0');
+      const ss = String(slotDate.getSeconds()).padStart(2, '0');
+      const descEventos = coinciden.map(c => `${c.tipo || 'alerta'} (${c.distrito || 'Arequipa'})`).join(', ');
+      itemsSegundo.push({
+        etiqueta: `${hh}:${mm}:${ss}`,
+        valor: coinciden.length,
+        detalle: coinciden.length ? `Hora ${hh}:${mm}:${ss} — ${descEventos}` : `Hora ${hh}:${mm}:${ss} — Sin eventos en este segundo`
+      });
+    }
+
+    // 1. Hora por hora (00h a 23h de hoy)
+    const itemsHora = [];
+    let totalHora = 0;
+    for (let hIdx = 0; hIdx < 24; hIdx++) {
+      const delDiaYHora = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioDia && ts.getHours() === hIdx;
+      });
+      totalHora += delDiaYHora.length;
+      const hStr = `${String(hIdx).padStart(2, '0')}h`;
+      const tipos = delDiaYHora.map(x => x.tipo).filter(Boolean).join(', ');
+      itemsHora.push({
+        etiqueta: hStr,
+        valor: delDiaYHora.length,
+        detalle: delDiaYHora.length ? `Franja ${hStr} de hoy — Tipos: ${tipos}` : `Franja ${hStr} de hoy — Sin alertas`
+      });
+    }
+
+    // 2. Día (franjas de 4h)
+    const franjasDia = ['00h', '04h', '08h', '12h', '16h', '20h'];
+    const itemsDia = franjasDia.map((fLbl, idx) => {
+      const inicioF = idx * 4;
+      const finF = inicioF + 3;
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioDia && ts.getHours() >= inicioF && ts.getHours() <= finF;
+      }).length;
+      return {
+        etiqueta: fLbl,
+        valor: cant,
+        detalle: `Hoy entre ${String(inicioF).padStart(2, '0')}:00 y ${String(finF).padStart(2, '0')}:59 — ${cant} alerta(s)`
+      };
+    });
+    const totalDia = itemsDia.reduce((acc, x) => acc + x.valor, 0);
+
+    // 3. Semana (últimos 7 días)
+    const itemsSemana = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(inicioDia);
+      d.setDate(inicioDia.getDate() - i);
+      const sig = new Date(d);
+      sig.setDate(d.getDate() + 1);
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= d && ts < sig;
+      }).length;
+      const lbl = `${d.getDate()}/${d.getMonth() + 1}`;
+      itemsSemana.push({
+        etiqueta: lbl,
+        valor: cant,
+        detalle: `Fecha ${d.toLocaleDateString('es-PE')} — ${cant} alerta(s) simuladas`
+      });
+    }
+    const totalSemana = itemsSemana.reduce((acc, x) => acc + x.valor, 0);
+
+    // 4. Mes (4 semanas del mes actual)
+    const semanasMes = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+    const itemsMes = semanasMes.map((sLbl, idx) => {
+      const diaIni = idx * 7 + 1;
+      const diaFin = idx === 3 ? 31 : (idx + 1) * 7;
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        if (isNaN(ts.getTime())) return false;
+        return ts.getFullYear() === ahora.getFullYear() && ts.getMonth() === ahora.getMonth() && ts.getDate() >= diaIni && ts.getDate() <= diaFin;
+      }).length;
+      return {
+        etiqueta: sLbl,
+        valor: cant,
+        detalle: `${sLbl} (días ${diaIni} al ${diaFin}) — ${cant} alerta(s)`
+      };
+    });
+    const totalMes = itemsMes.reduce((acc, x) => acc + x.valor, 0);
+
+    // 5. Anual (12 meses)
+    const mesesAnio = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const itemsAnual = mesesAnio.map((mLbl, mIdx) => {
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioAnio && ts.getFullYear() === ahora.getFullYear() && ts.getMonth() === mIdx;
+      }).length;
+      return {
+        etiqueta: mLbl,
+        valor: cant,
+        detalle: `${mLbl} ${ahora.getFullYear()} — ${cant} alerta(s)`
+      };
+    });
+    const totalAnual = itemsAnual.reduce((acc, x) => acc + x.valor, 0);
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const setHtml = (id, h) => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+
+    setTxt('simCountSegundo', `${total60s} evento(s) en 60s`);
+    setTxt('simCountHora', String(totalHora));
+    setTxt('simCountDia', String(totalDia));
+    setTxt('simCountSemana', String(totalSemana));
+    setTxt('simCountMes', String(totalMes));
+    setTxt('simCountAnual', String(totalAnual));
+
+    setHtml('simPlanoSegundoGrande', construirSvgInteractivo(itemsSegundo, '#38BDF8', 210, 960));
+    setHtml('simPlanoHora', construirSvgInteractivo(itemsHora, '#FBBF24', 135, 300));
+    setHtml('simPlanoDia', construirSvgInteractivo(itemsDia, '#F97316', 135, 280));
+    setHtml('simPlanoSemana', construirSvgInteractivo(itemsSemana, '#38BDF8', 135, 280));
+    setHtml('simPlanoMes', construirSvgInteractivo(itemsMes, '#A78BFA', 135, 280));
+    setHtml('simPlanoAnual', construirSvgInteractivo(itemsAnual, '#34D399', 135, 320));
+
+    const bitacora = document.getElementById('simBitacoraSegundo');
+    if (bitacora) {
+      if (!eventos60s.length) {
+        bitacora.innerHTML = `<span style="font-size:11px;color:#6B7280;">Sin alertas registradas en los últimos 60 segundos. Pulsa "Simular y Guardar en BD" o "Iniciar Registro".</span>`;
+      } else {
+        bitacora.innerHTML = eventos60s.slice(-8).reverse().map(ev => {
+          const hTxt = ev._ts.toLocaleTimeString('es-PE', { hour12: false });
+          return `<span style="padding:4px 8px;border-radius:6px;background:#1A1D22;border:1px solid #2F3540;font-size:11px;color:#E5E7EB;"><strong style="color:#38BDF8;">${hTxt}</strong> · ${(ev.tipo || 'alerta').toUpperCase()} · ${ev.distrito || 'Arequipa'}</span>`;
+        }).join('');
+      }
+    }
+  };
+
+  if (!tickerSegundoVivo) {
+    tickerSegundoVivo = setInterval(() => {
+      const secSim = document.getElementById('secSimuladorStatsAdmin');
+      if (secSim && secSim.style.display !== 'none') {
+        window.renderizarPlanosSimulador();
+      }
+    }, 1000);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const gridViejo = document.querySelector('#secSimuladorStatsAdmin .stats-card > div[style*="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"]');
+    if (gridViejo && !document.getElementById('simPlanoSegundoGrande')) {
+      gridViejo.outerHTML = `<div id="simTooltipFlotante" style="position:fixed;pointer-events:none;z-index:9999;display:none;background:#0B0D10;border:1px solid #3B4252;color:#F9FAFB;padding:8px 10px;border-radius:8px;font-size:11px;box-shadow:0 8px 20px rgba(0,0,0,0.5);max-width:260px;"></div>
+
+<div style="display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:14px;">
+  <div style="padding:16px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+      <div>
+        <strong style="font-size:15px;color:#F9FAFB;">Monitor Principal Segundo a Segundo (Eventos en Vivo)</strong>
+        <div style="font-size:12px;color:#9CA3AF;">Visualiza cada alerta o problema que ocurre segundo a segundo con precisión exacta.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:#9CA3AF;">Último segundo: <strong id="simRelojSegundo" style="color:#38BDF8;">--:--:--</strong></span>
+        <span id="simCountSegundo" style="padding:3px 10px;border-radius:999px;background:rgba(56,189,248,0.15);color:#38BDF8;font-weight:700;font-size:12px;">0 eventos (60s)</span>
+      </div>
+    </div>
+    <div id="simPlanoSegundoGrande"></div>
+    <div id="simBitacoraSegundo" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:76px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+  <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;color:#F9FAFB;">Estadística Hora por Hora</strong>
+      <span id="simCountHora" style="font-size:12px;font-weight:700;color:#FBBF24;">0</span>
+    </div>
+    <div id="simPlanoHora"></div>
+  </div>
+
+  <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;color:#F9FAFB;">Estadística del Día</strong>
+      <span id="simCountDia" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+    </div>
+    <div id="simPlanoDia"></div>
+  </div>
+
+  <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;color:#F9FAFB;">Estadística de la Semana</strong>
+      <span id="simCountSemana" style="font-size:12px;font-weight:700;color:#38BDF8;">0</span>
+    </div>
+    <div id="simPlanoSemana"></div>
+  </div>
+
+  <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;color:#F9FAFB;">Estadística del Mes</strong>
+      <span id="simCountMes" style="font-size:12px;font-weight:700;color:#A78BFA;">0</span>
+    </div>
+    <div id="simPlanoMes"></div>
+  </div>
+
+  <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="font-size:14px;color:#F9FAFB;">Estadística Anual</strong>
+      <span id="simCountAnual" style="font-size:12px;font-weight:700;color:#34D399;">0</span>
+    </div>
+    <div id="simPlanoAnual"></div>
+  </div>
+</div>`;
+    }
+    window.renderizarPlanosSimulador();
+  });
+})();
+</script>
+<script>
+(function iniciarMotorVivoPlanosSimulador() {
+  const STORAGE_KEY = 'alertacayma_simulador_alertas_v1';
+
+  function leerEventos() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function mostrarTooltip(evt, titulo, detalle) {
+    const tip = document.getElementById('simTooltipFlotante');
+    if (!tip) return;
+    tip.innerHTML = `<div style="font-weight:700;margin-bottom:2px;color:#F9FAFB;">${titulo}</div><div style="color:#CBD5E1;">${detalle}</div>`;
+    tip.style.display = 'block';
+    tip.style.left = `${Math.min(window.innerWidth - 280, Math.max(8, evt.clientX + 14))}px`;
+    tip.style.top = `${Math.min(window.innerHeight - 90, Math.max(8, evt.clientY + 14))}px`;
+  }
+
+  window.simMoverPunto = function(evt, tEnc, dEnc) {
+    mostrarTooltip(evt, decodeURIComponent(tEnc), decodeURIComponent(dEnc));
+  };
+  window.simSalirPunto = function() {
+    const tip = document.getElementById('simTooltipFlotante');
+    if (tip) tip.style.display = 'none';
+  };
+
+  function svgLineaInteractiva(items, colorHex, alto, ancho, modoPulsoVivo) {
+    const padX = 20;
+    const padTop = 16;
+    const padBot = 24;
+    const plotH = alto - padTop - padBot;
+    const maxVal = Math.max(1, ...items.map(x => x.valor));
+    const n = Math.max(1, items.length);
+    const stepX = (ancho - padX * 2) / Math.max(1, n - 1);
+
+    const pts = items.map((it, idx) => {
+      const x = n === 1 ? ancho / 2 : padX + idx * stepX;
+      const baseRatio = modoPulsoVivo ? (it.valor > 0 ? Math.min(1, 0.25 + (it.valor / maxVal) * 0.75) : 0.06) : (it.valor / maxVal);
+      const y = padTop + plotH - baseRatio * plotH;
+      return { ...it, x, y, esUltimo: idx === items.length - 1 };
+    });
+
+    const poly = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const area = pts.length
+      ? `${pts[0].x.toFixed(1)},${(padTop + plotH).toFixed(1)} ` + poly + ` ${pts[pts.length - 1].x.toFixed(1)},${(padTop + plotH).toFixed(1)}`
+      : '';
+
+    const grid = [0, 0.5, 1].map(f => {
+      const gy = padTop + plotH - f * plotH;
+      return `<line x1="${padX}" y1="${gy.toFixed(1)}" x2="${ancho - padX}" y2="${gy.toFixed(1)}" stroke="#1F2430" stroke-dasharray="3,3" stroke-width="1" />`;
+    }).join('');
+
+    const puntosSvg = pts.map(p => {
+      const tEnc = encodeURIComponent(`${p.etiqueta} — ${p.valor} alerta(s)`);
+      const dEnc = encodeURIComponent(p.detalle);
+      const r = p.esUltimo ? 5.5 : (p.valor > 0 ? 4.5 : 2.5);
+      const fill = p.esUltimo ? '#F97316' : (p.valor > 0 ? colorHex : '#4B5563');
+      const anillo = p.esUltimo ? `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9" fill="none" stroke="#F97316" stroke-opacity="0.45" stroke-width="1.5" />` : '';
+      return `
+        <g style="cursor:pointer;" onmousemove="simMoverPunto(event,'${tEnc}','${dEnc}')" onmouseleave="simSalirPunto()">
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="10" fill="transparent" />
+          ${anillo}
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="#0E1013" stroke-width="1.2" />
+        </g>
+      `;
+    }).join('');
+
+    const pasoLbl = Math.max(1, Math.floor(pts.length / 6));
+    const etiquetasSvg = pts.filter((_, i) => i === 0 || i === pts.length - 1 || i % pasoLbl === 0).map(p =>
+      `<text x="${p.x.toFixed(1)}" y="${alto - 6}" fill="#9CA3AF" font-size="9" text-anchor="middle">${p.etiqueta}</text>`
+    ).join('');
+
+    return `
+      <svg viewBox="0 0 ${ancho} ${alto}" width="100%" height="${alto}" style="display:block;background:#0E1013;border-radius:8px;border:1px solid #232832;">
+        ${grid}
+        <line x1="${padX}" y1="${padTop + plotH}" x2="${ancho - padX}" y2="${padTop + plotH}" stroke="#2F3540" stroke-width="1" />
+        ${area ? `<polygon points="${area}" fill="${colorHex}" fill-opacity="0.16" />` : ''}
+        ${pts.length > 1 ? `<polyline fill="none" stroke="${colorHex}" stroke-width="2.2" points="${poly}" />` : ''}
+        ${etiquetasSvg}
+        ${puntosSvg}
+      </svg>
+    `;
+  }
+
+  window.renderizarPlanosSimulador = function() {
+    const eventos = leerEventos();
+    const ahora = new Date();
+    const relojEl = document.getElementById('simRelojSegundo');
+    if (relojEl) relojEl.textContent = ahora.toLocaleTimeString('es-PE', { hour12: false });
+
+    const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    const inicioSemana = new Date(inicioDia);
+    inicioSemana.setDate(inicioDia.getDate() - 6);
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+    const hace60s = new Date(ahora.getTime() - 60000);
+
+    // 1. Segundo a segundo (últimos 60 segundos)
+    const itemsSeg = [];
+    let total60s = 0;
+    const eventos60s = [];
+    for (let s = 59; s >= 0; s--) {
+      const slot = new Date(ahora.getTime() - s * 1000);
+      const secKey = Math.floor(slot.getTime() / 1000);
+      const match = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= hace60s && Math.floor(ts.getTime() / 1000) === secKey;
+      });
+      if (match.length > 0) {
+        total60s += match.length;
+        match.forEach(m => eventos60s.push({ ...m, _ts: new Date(m.timestamp) }));
+      }
+      const hh = String(slot.getHours()).padStart(2, '0');
+      const mm = String(slot.getMinutes()).padStart(2, '0');
+      const ss = String(slot.getSeconds()).padStart(2, '0');
+      itemsSeg.push({
+        etiqueta: `${hh}:${mm}:${ss}`,
+        valor: match.length,
+        detalle: match.length
+          ? `${hh}:${mm}:${ss} — ${match.length} alerta(s): ${match.map(x => `${x.tipo} (${x.distrito})`).join(', ')}`
+          : `${hh}:${mm}:${ss} — Monitoreo sin alerta en este segundo`
+      });
+    }
+
+    // 2. Hora por hora (00h a 23h)
+    const itemsHora = [];
+    let totalHora = 0;
+    for (let h = 0; h < 24; h++) {
+      const matchH = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioDia && ts.getHours() === h;
+      });
+      totalHora += matchH.length;
+      const hLbl = `${String(h).padStart(2, '0')}h`;
+      itemsHora.push({
+        etiqueta: hLbl,
+        valor: matchH.length,
+        detalle: `Hora ${hLbl} de hoy — ${matchH.length} alerta(s) simuladas`
+      });
+    }
+
+    // 3. Día (franjas de 4h)
+    const franjas = ['00h', '04h', '08h', '12h', '16h', '20h'];
+    const itemsDia = franjas.map((fLbl, idx) => {
+      const hIni = idx * 4;
+      const hFin = hIni + 3;
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioDia && ts.getHours() >= hIni && ts.getHours() <= hFin;
+      }).length;
+      return { etiqueta: fLbl, valor: cant, detalle: `Hoy ${fLbl} — ${cant} alerta(s)` };
+    });
+
+    // 4. Semana (7 días)
+    const itemsSem = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(inicioDia);
+      d.setDate(inicioDia.getDate() - i);
+      const sig = new Date(d);
+      sig.setDate(d.getDate() + 1);
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= d && ts < sig;
+      }).length;
+      itemsSem.push({ etiqueta: `${d.getDate()}/${d.getMonth() + 1}`, valor: cant, detalle: `${d.toLocaleDateString('es-PE')} — ${cant} alerta(s)` });
+    }
+
+    // 5. Mes (4 semanas)
+    const itemsMes = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'].map((sLbl, idx) => {
+      const dIni = idx * 7 + 1;
+      const dFin = idx === 3 ? 31 : (idx + 1) * 7;
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts.getFullYear() === ahora.getFullYear() && ts.getMonth() === ahora.getMonth() && ts.getDate() >= dIni && ts.getDate() <= dFin;
+      }).length;
+      return { etiqueta: sLbl, valor: cant, detalle: `${sLbl} — ${cant} alerta(s)` };
+    });
+
+    // 6. Anual (12 meses)
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const itemsAnio = meses.map((mLbl, mIdx) => {
+      const cant = eventos.filter(ev => {
+        const ts = new Date(ev.timestamp || 0);
+        return !isNaN(ts.getTime()) && ts >= inicioAnio && ts.getFullYear() === ahora.getFullYear() && ts.getMonth() === mIdx;
+      }).length;
+      return { etiqueta: mLbl, valor: cant, detalle: `${mLbl} ${ahora.getFullYear()} — ${cant} alerta(s)` };
+    });
+
+    const setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    const setHtml = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
+
+    setTxt('simCountSegundo', `${total60s} evento(s) en 60s`);
+    setTxt('simCountHora', String(totalHora));
+    setTxt('simCountDia', String(itemsDia.reduce((a, b) => a + b.valor, 0)));
+    setTxt('simCountSemana', String(itemsSem.reduce((a, b) => a + b.valor, 0)));
+    setTxt('simCountMes', String(itemsMes.reduce((a, b) => a + b.valor, 0)));
+    setTxt('simCountAnual', String(itemsAnio.reduce((a, b) => a + b.valor, 0)));
+
+    setHtml('simPlanoSegundoGrande', svgLineaInteractiva(itemsSeg, '#38BDF8', 215, 980, true));
+    setHtml('simPlanoHora', svgLineaInteractiva(itemsHora, '#FBBF24', 135, 300, false));
+    setHtml('simPlanoDia', svgLineaInteractiva(itemsDia, '#F97316', 135, 280, false));
+    setHtml('simPlanoSemana', svgLineaInteractiva(itemsSem, '#38BDF8', 135, 280, false));
+    setHtml('simPlanoMes', svgLineaInteractiva(itemsMes, '#A78BFA', 135, 280, false));
+    setHtml('simPlanoAnual', svgLineaInteractiva(itemsAnio, '#34D399', 135, 320, false));
+
+    const bit = document.getElementById('simBitacoraSegundo');
+    if (bit) {
+      if (!eventos60s.length) {
+        bit.innerHTML = `<span style="font-size:11px;color:#6B7280;">Reloj en movimiento cada segundo. Pulsa "Simular y Guardar en BD" o "Iniciar Registro" para ver cada alerta aparecer en tiempo real.</span>`;
+      } else {
+        bit.innerHTML = eventos60s.slice(-8).reverse().map(ev => {
+          const hStr = ev._ts.toLocaleTimeString('es-PE', { hour12: false });
+          return `<span style="padding:4px 8px;border-radius:6px;background:#1A1D22;border:1px solid #2F3540;font-size:11px;color:#E5E7EB;"><strong style="color:#38BDF8;">${hStr}</strong> · ${(ev.tipo || 'alerta').toUpperCase()} · ${ev.distrito || 'Arequipa'}</span>`;
+        }).join('');
+      }
+    }
+  };
+
+  setInterval(() => {
+    const sec = document.getElementById('secSimuladorStatsAdmin');
+    if (sec && sec.style.display !== 'none') {
+      window.renderizarPlanosSimulador();
+    }
+  }, 1000);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.renderizarPlanosSimulador());
+  } else {
+    window.renderizarPlanosSimulador();
+  }
 })();
 </script>
 </body>
