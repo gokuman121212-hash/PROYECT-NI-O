@@ -2351,5 +2351,176 @@ async function simularAlertaAdmin() {
   }
 })();
 </script>
+<script>
+(function automatizarAlertasInternasSinErrorRed() {
+  const CLAVE_ALERTAS_INTERNAS = 'alertacayma_alertas_activas_internas_v1';
+  const CLAVE_SIM_PERM = 'alertacayma_simulaciones_permanentes_v1';
+  const CLAVE_SIM_STATS = 'alertacayma_simulador_alertas_v1';
+
+  function leerJsonSeguro(clave) {
+    try {
+      const raw = localStorage.getItem(clave);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function guardarJsonSeguro(clave, valor) {
+    try {
+      localStorage.setItem(clave, JSON.stringify(valor));
+    } catch (_) {}
+  }
+
+  function obtenerAlertasInternasCombinadas() {
+    const internas = leerJsonSeguro(CLAVE_ALERTAS_INTERNAS);
+    const perm = leerJsonSeguro(CLAVE_SIM_PERM);
+    const stats = leerJsonSeguro(CLAVE_SIM_STATS);
+
+    const mapa = new Map();
+    [...perm, ...stats, ...internas].forEach(item => {
+      if (!item || !item.alerta_id) return;
+      const previo = mapa.get(item.alerta_id) || {};
+      mapa.set(item.alerta_id, {
+        ...previo,
+        ...item,
+        estado: item.estado || previo.estado || 'ACTIVA'
+      });
+    });
+
+    const lista = Array.from(mapa.values());
+    guardarJsonSeguro(CLAVE_ALERTAS_INTERNAS, lista);
+    return lista;
+  }
+
+  function pintarListaActivasInternas(activas) {
+    const cont = document.getElementById('listaAlertasActivasAdmin');
+    const msg = document.getElementById('adminAlertasEstadoMsg');
+    const badge = document.getElementById('badgeAlertasActivasAdmin');
+
+    if (badge) badge.textContent = String(activas.length);
+    if (msg) {
+      msg.textContent = `Monitoreo automático interno activo · Alertas activas: ${activas.length} (${new Date().toLocaleTimeString('es-PE', { hour12: false })})`;
+    }
+    if (!cont) return;
+
+    if (!activas.length) {
+      cont.innerHTML = `<div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">Sin alertas activas en este momento. Las alertas generadas aparecerán aquí automáticamente.</div>`;
+      return;
+    }
+
+    cont.innerHTML = activas.map(al => {
+      const id = String(al.alerta_id || '');
+      const tipo = String(al.categoria || al.tipo || 'EMERGENCIA').toUpperCase();
+      const usuario = String(al.nombre_usuario || 'Vecino / Simulación');
+      const distrito = String(al.distrito || 'Arequipa');
+      const sector = String(al.sector_referencia || '');
+      const desc = String(al.descripcion || 'Alerta activa en seguimiento.');
+      const idEsc = id.replace(/'/g, "\\'");
+      return `
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+          <div style="flex:1;min-width:240px;">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px;">
+              <span style="padding:2px 8px;border-radius:999px;background:rgba(239,68,68,0.18);color:#F87171;font-weight:700;font-size:11px;">${tipo}</span>
+              <strong style="font-size:14px;color:#F9FAFB;">${usuario} — ${distrito}</strong>
+              <span style="font-size:11px;color:#9CA3AF;">ID: ${id}</span>
+            </div>
+            <div style="font-size:13px;color:#D1D5DB;margin-bottom:3px;">${desc}</div>
+            ${sector ? `<div style="font-size:12px;color:#9CA3AF;">Sector: ${sector}</div>` : ''}
+          </div>
+          <button type="button" onclick="detenerAlertaAdmin('${idEsc}')"
+                  style="padding:9px 14px;border-radius:10px;border:1px solid #EF4444;background:rgba(239,68,68,0.16);color:#FCA5A5;font-weight:700;font-size:12px;cursor:pointer;">
+            Detener alerta
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.cargarAlertasActivasAdmin = async function() {
+    const todas = obtenerAlertasInternasCombinadas();
+    let activas = todas.filter(p => String(p.estado || 'ACTIVA').toUpperCase() !== 'ARCHIVADA');
+
+    const baseUrl = (document.getElementById('adminAlertasBackendUrl')?.value || document.getElementById('statsBackendUrl')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 900);
+      const res = await fetch(`${baseUrl}/api/v1/alertas/mapa-calor`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (res.ok) {
+        const data = await res.json();
+        const puntos = Array.isArray(data.puntos) ? data.puntos : [];
+        const archivadasIds = new Set(
+          todas.filter(x => String(x.estado || '').toUpperCase() === 'ARCHIVADA').map(x => x.alerta_id)
+        );
+        const remotosActivos = puntos.filter(p => !archivadasIds.has(p.alerta_id) && String(p.estado || 'ACTIVA').toUpperCase() !== 'ARCHIVADA');
+        const fusion = new Map();
+        [...activas, ...remotosActivos].forEach(x => { if (x && x.alerta_id) fusion.set(x.alerta_id, x); });
+        activas = Array.from(fusion.values());
+      }
+    } catch (_) {
+      // Modo interno autónomo silencioso: nunca muestra error de conexión
+    }
+
+    pintarListaActivasInternas(activas);
+  };
+
+  window.detenerAlertaAdmin = async function(alertaId) {
+    if (!alertaId) return;
+    const todas = obtenerAlertasInternasCombinadas();
+    const actualizada = todas.map(item => item.alerta_id === alertaId ? { ...item, estado: 'ARCHIVADA' } : item);
+    guardarJsonSeguro(CLAVE_ALERTAS_INTERNAS, actualizada);
+
+    const baseUrl = (document.getElementById('adminAlertasBackendUrl')?.value || document.getElementById('statsBackendUrl')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 900);
+      await fetch(`${baseUrl}/api/v1/alertas/${encodeURIComponent(alertaId)}/archivar`, {
+        method: 'PATCH',
+        signal: ctrl.signal
+      });
+      clearTimeout(t);
+    } catch (_) {}
+
+    await window.cargarAlertasActivasAdmin();
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+  };
+
+  // Enganchar simulación para que también alimente la bandeja interna de alertas activas automáticamente
+  const prevSim = window.simularAlertaAdmin;
+  if (typeof prevSim === 'function' && !prevSim._conectaAlertasInternas) {
+    const wrappedSim = async function() {
+      await prevSim();
+      const perm = leerJsonSeguro(CLAVE_SIM_PERM);
+      const ultimo = perm[perm.length - 1];
+      if (ultimo) {
+        const internas = leerJsonSeguro(CLAVE_ALERTAS_INTERNAS);
+        internas.push({
+          ...ultimo,
+          nombre_usuario: ultimo.nombre_usuario || 'Simulación Admin',
+          estado: 'ACTIVA'
+        });
+        guardarJsonSeguro(CLAVE_ALERTAS_INTERNAS, internas);
+      }
+      window.cargarAlertasActivasAdmin();
+    };
+    wrappedSim._conectaAlertasInternas = true;
+    window.simularAlertaAdmin = wrappedSim;
+  }
+
+  setInterval(() => {
+    window.cargarAlertasActivasAdmin();
+  }, 4000);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.cargarAlertasActivasAdmin());
+  } else {
+    window.cargarAlertasActivasAdmin();
+  }
+})();
+</script>
 </body>
 </html>
