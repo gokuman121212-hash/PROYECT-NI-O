@@ -3091,5 +3091,221 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta)
   setTimeout(reubicarTarjetaSimCiudadana, 800);
 })();
 </script>
+<!--
+From Uiverse.io by H_K_MENON - https://uiverse.io/H_K_MENON/cowardly-skunk-4
+From Uiverse.io by Li-Deheng - https://uiverse.io/Li-Deheng/shy-moth-10
+From Uiverse.io by vinodjangid07 - https://uiverse.io/vinodjangid07/nervous-warthog-37
+From Uiverse.io by vinodjangid07 - https://uiverse.io/vinodjangid07/empty-bat-15
+From Uiverse.io by McHaXYT - https://uiverse.io/McHaXYT/evil-parrot-13
+From Uiverse.io by elijahgummer - https://uiverse.io/elijahgummer/slippery-dragonfly-100
+From Uiverse.io by elijahgummer - https://uiverse.io/elijahgummer/bad-baboon-59
+MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon), Li-Deheng (李德恒), vinodjangid07 (Vinod Jangid), McHaXYT (McHaXYT), elijahgummer (Elijah W Gummer)
+-->
+<style id="cafqRedisenioTematicoArequipa">
+  :root {
+    --cafq-bg-base: #090c10;
+    --cafq-bg-card: rgba(16, 21, 29, 0.94);
+    --cafq-bg-elevated: rgba(23, 30, 41, 0.96);
+    --cafq-border: rgba(47, 248, 255, 0.16);
+    --cafq-cyan: #2ff8ff;
+    --cafq-lime: #adff2f;
+    --cafq-alert: #ff135a;
+    --cafq-alert-hover: #ff1472;
+    --cafq-violet: #a955ff;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 12% 8%, rgba(47, 248, 255, 0.08), transparent 36%),
+      radial-gradient(circle at 88% 14%, rgba(255, 19, 90, 0.08), transparent 38%),
+      var(--cafq-bg-base) !important;
+    color: #eef2f6 !important;
+  }
+
+  /* Neutralizar tonos naranjas residuales en textos, insignias y bordes */
+  [style*="#f97316"], [style*="rgb(249, 115, 22)"],
+  [style*="#ea580c"], [style*="rgb(234, 88, 12)"],
+  [style*="#ff6b00"], [style*="#ff5500"] {
+    color: var(--cafq-cyan) !important;
+  }
+
+  .stats-card,
+  section > div[style*="background"] {
+    border-color: var(--cafq-border) !important;
+  }
+
+  /* Variante 1 (inspirada en H_K_MENON): Botón circular cian/lima con flechas */
+  .cafq-uiverse-btn,
+  .cafq-theme-btn-cyan {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 10px 24px !important;
+    border: 2px solid transparent !important;
+    font-size: 13px !important;
+    background-color: #101620 !important;
+    border-radius: 100px !important;
+    font-weight: 600 !important;
+    color: rgb(47, 248, 255) !important;
+    box-shadow: 0 0 0 1.5px rgba(47, 255, 238, 0.75) !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+    transition: all 0.55s cubic-bezier(0.23, 1, 0.32, 1) !important;
+  }
+
+  .cafq-theme-btn-cyan:hover,
+  .cafq-uiverse-btn:hover {
+    box-shadow: 0 0 0 10px transparent !important;
+    color: #12161f !important;
+    border-radius: 12px !important;
+  }
+
+  .cafq-theme-btn-cyan .cafq-cyan-circle,
+  .cafq-uiverse-btn .cafq-uiverse-circle {
+    background-color: rgb(47, 224, 255) !important;
+  }
+
+  /* Variante 2 (inspirada en Li-Deheng): Botón de alerta/acción con flujo de flechas */
+  .cafq-theme-btn-flow {
+    --flow-bg: #ff135a;
+    --flow-bg-hover: #ff1472;
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 10px 20px !important;
+    border: none !important;
+    border-radius: 999px !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    color: #ffffff !important;
+    background: linear-gradient(120deg, #ff135a, #b81d68) !important;
+    box-shadow: 0 0 14px rgba(255, 19, 90, 0.28) !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+    transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1) !important;
+  }
+
+  .cafq-theme-btn-flow:hover {
+    background: linear-gradient(120deg, var(--flow-bg-hover), #d91b78) !important;
+    box-shadow: 0 0 20px rgba(255, 20, 114, 0.52) !important;
+    transform: translateY(-1px);
+  }
+
+  .cafq-theme-btn-flow:active {
+    transform: scale(0.96);
+  }
+
+  /* Variante 3 (inspirada en McHaXYT): Botón de creación/registro con gradiente cian-violeta */
+  .cafq-theme-btn-create {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    padding: 10px 20px !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #f4f7fb !important;
+    background: linear-gradient(144deg, #af40ff, #5b42f3 50%, #00ddeb) !important;
+    box-shadow: 0 6px 18px rgba(91, 66, 243, 0.28) !important;
+    cursor: pointer !important;
+    transition: all 0.35s ease !important;
+  }
+
+  .cafq-theme-btn-create:hover {
+    box-shadow: inset 0 4px 18px rgba(255, 255, 255, 0.22), 0 8px 22px rgba(0, 221, 235, 0.35) !important;
+    transform: translateY(-1px);
+  }
+
+  /* Variante 4 (inspirada en elijahgummer): Píldora expansible para zonas y accesos rápidos */
+  .cafq-theme-pill-zone {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    min-height: 38px !important;
+    padding: 8px 18px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(169, 85, 255, 0.45) !important;
+    background: rgba(20, 25, 35, 0.92) !important;
+    color: #e2e8f0 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1) !important;
+  }
+
+  .cafq-theme-pill-zone:hover {
+    background: linear-gradient(45deg, #a955ff, #00ddeb) !important;
+    color: #0b0e14 !important;
+    border-color: transparent !important;
+    box-shadow: 0 8px 20px rgba(0, 221, 235, 0.28) !important;
+    transform: translateY(-1px);
+  }
+
+  .cafq-page-anim-btn.is-active-tab,
+  #adminSubnav .admin-subnav-btn.active {
+    background: linear-gradient(120deg, #00ddeb, #5b42f3) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 18px rgba(0, 221, 235, 0.4) !important;
+    border-color: transparent !important;
+  }
+</style>
+
+<script>
+(function aplicarTematicaVisualUnificada() {
+  const FLECHA_TRIPLES = `<svg viewBox="0 0 66 43" width="18" height="12" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="39.58,4.46 44.11,0 66,21.5 44.11,43 39.58,38.54 56.94,21.5"></polygon><polygon points="19.79,4.46 24.32,0 46.21,21.5 24.32,43 19.79,38.54 37.15,21.5"></polygon><polygon points="0,4.46 4.53,0 26.42,21.5 4.53,43 0,38.54 17.36,21.5"></polygon></svg>`;
+  const ICONO_PLUS = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 19v-7m0 0V5m0 7H5m7 0h7"></path></svg>`;
+
+  function tematizarBotones() {
+    document.querySelectorAll('button').forEach(btn => {
+      if (btn.classList.contains('cafq-uiverse-btn')) return;
+      const txt = (btn.textContent || '').trim().toLowerCase();
+
+      btn.classList.remove('cafq-theme-btn-cyan', 'cafq-theme-btn-flow', 'cafq-theme-btn-create', 'cafq-theme-pill-zone');
+
+      if (txt.includes('activar') || txt.includes('detener') || txt.includes('limpiar') || txt.includes('sismo') || txt.includes('alerta')) {
+        btn.classList.add('cafq-theme-btn-flow');
+        if (!btn.querySelector('.cafq-flow-arrows') && txt.includes('activar')) {
+          const span = document.createElement('span');
+          span.className = 'cafq-flow-arrows';
+          span.innerHTML = FLECHA_TRIPLES;
+          btn.appendChild(span);
+        }
+      } else if (txt.includes('simular') || txt.includes('exportar') || txt.includes('crear') || txt.includes('guardar')) {
+        btn.classList.add('cafq-theme-btn-create');
+        if (!btn.querySelector('.cafq-create-plus') && txt.includes('simular')) {
+          const span = document.createElement('span');
+          span.className = 'cafq-create-plus';
+          span.innerHTML = ICONO_PLUS;
+          btn.prepend(span);
+        }
+      } else if (txt.includes('arequipa') || txt.includes('selva alegre') || txt.includes('cayma') || txt.includes('anashuayco') || txt.includes('chullo')) {
+        btn.classList.add('cafq-theme-pill-zone');
+      } else {
+        btn.classList.add('cafq-theme-btn-cyan');
+      }
+    });
+  }
+
+  function iniciar() {
+    tematizarBotones();
+    setTimeout(tematizarBotones, 400);
+    setTimeout(tematizarBotones, 1200);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciar);
+  } else {
+    iniciar();
+  }
+})();
+</script>
 </body>
 </html>
