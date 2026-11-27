@@ -4048,5 +4048,165 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   setInterval(agregarBuscadorEnRiesgos, 2500);
 })();
 </script>
+<script>
+(function conectarOllamaLocalYControlOnda() {
+  if (window.__cafqOllamaYOndaListo) return;
+  window.__cafqOllamaYOndaListo = true;
+
+  // 1. Barra compacta de intensidad/radio de onda sobre #mapAdmin
+  function montarBarraIntensidadMapa() {
+    const mapaDiv = document.getElementById('mapAdmin');
+    if (!mapaDiv || !mapaDiv.parentNode || document.getElementById('cafqBarraOndaMapa')) return;
+
+    const barra = document.createElement('div');
+    barra.id = 'cafqBarraOndaMapa';
+    barra.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:10px 12px;border-radius:12px;background:rgba(1,28,64,0.78);border:1px solid rgba(84,172,191,0.38);';
+    barra.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.05em;color:#54ACBF;">ALCANCE DE ONDA:</span>
+        <select id="cafqSelectIntensidadOnda" style="padding:6px 10px;border-radius:8px;font-size:12px;">
+          <option value="1500">Leve · 1.5 km (Local)</option>
+          <option value="3000" selected>Moderado · 3.0 km (Distrital)</option>
+          <option value="5200">Fuerte · 5.2 km (Interdistrital)</option>
+          <option value="8500">Severo · 8.5 km (Metropolitano Arequipa)</option>
+        </select>
+        <select id="cafqSelectEpicentroOnda" style="padding:6px 10px;border-radius:8px;font-size:12px;">
+          <option value="-16.3988,-71.5369">Cercado Arequipa</option>
+          <option value="-16.3645,-71.5520">Cayma / Torrentera Chullo</option>
+          <option value="-16.3740,-71.5165">Alto Selva Alegre</option>
+          <option value="-16.3865,-71.5455">Yanahuara</option>
+          <option value="-16.3520,-71.5650">Anashuayco</option>
+        </select>
+      </div>
+      <button type="button" id="cafqBtnProbarOndaMapa" style="padding:7px 14px;border-radius:999px;font-size:12px;">Proyectar Onda en Mapa</button>
+    `;
+
+    mapaDiv.parentNode.insertBefore(barra, mapaDiv);
+
+    document.getElementById('cafqBtnProbarOndaMapa')?.addEventListener('click', () => {
+      const coords = (document.getElementById('cafqSelectEpicentroOnda')?.value || '-16.3988,-71.5369').split(',');
+      const radio = Number(document.getElementById('cafqSelectIntensidadOnda')?.value || 3000);
+      const lat = Number(coords[0]) || -16.3988;
+      const lng = Number(coords[1]) || -71.5369;
+      const zonaTexto = document.getElementById('cafqSelectEpicentroOnda')?.selectedOptions?.[0]?.textContent || 'Arequipa';
+
+      if (typeof window.cafqDispararOndaMapa === 'function') {
+        window.cafqDispararOndaMapa(lat, lng, `${zonaTexto} · Radio ${(radio / 1000).toFixed(1)} km`, radio >= 5000);
+      }
+
+      // Ajustar radio exacto si existe la capa Leaflet
+      setTimeout(() => {
+        const mapa = window.mapAdmin || window.map || window.mapa;
+        if (mapa && typeof L !== 'undefined') {
+          mapa.eachLayer(layer => {
+            if (layer instanceof L.Circle && typeof layer.setRadius === 'function') {
+              layer.setRadius(radio);
+            }
+          });
+        }
+      }, 60);
+    });
+  }
+
+  // 2. Consulta híbrida a Ollama local (127.0.0.1:11434) con respaldo táctico instantáneo
+  async function consultarIaHibrida(preguntaUsuario) {
+    const out = document.getElementById('cafqSalidaIA');
+    if (!out) return;
+
+    const actCount = document.getElementById('cafqKpiNumActivas')?.textContent ||
+                     document.getElementById('badgeAlertasActivasAdmin')?.textContent || '0';
+    const hora = new Date().toLocaleTimeString('es-PE', { hour12: false });
+    const q = (preguntaUsuario || 'Resumen operativo de riesgos en Arequipa').trim();
+
+    out.innerHTML = `<span style="color:#54ACBF;">Analizando contexto de Arequipa (${hora})...</span>`;
+
+    const esHttps = window.location.protocol === 'https:';
+    if (!esHttps) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 2500);
+        const promptSistema = `Eres el asistente de monitoreo de riesgos AlertaSOS en Arequipa, Peru. Alertas activas actuales: ${actCount}. Responde en espanol claro, breve (maximo 3 oraciones) y accionable sobre: ${q}`;
+
+        const resp = await fetch('http://127.0.0.1:11434/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            model: 'qwen2.5-coder:7b',
+            prompt: promptSistema,
+            stream: false
+          })
+        });
+        clearTimeout(timer);
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.response) {
+            out.innerHTML = `
+              <div style="margin-bottom:4px;"><strong>[IA LOCAL OLLAMA]</strong> · ${hora} · Alertas activas: <strong>${actCount}</strong></div>
+              <div>${String(data.response).replace(/</g, '&lt;')}</div>
+            `;
+            return;
+          }
+        }
+      } catch (_) {
+        // Silencioso: pasa al motor local integrado si Ollama no esta activo
+      }
+    }
+
+    const bajo = q.toLowerCase();
+    let titulo = 'DIAGNÓSTICO OPERATIVO';
+    let recomendacion = 'Mantén rutas de evacuación libres, ubica zonas seguras despejadas en altura y verifica el estado de las alertas activas en Arequipa.';
+
+    if (bajo.includes('sismo') || bajo.includes('temblor')) {
+      titulo = 'PROTOCOLO SÍSMICO (AREQUIPA)';
+      recomendacion = 'Durante el movimiento: ubícate en zona segura lejos de vidrios y muros inestables. Al detenerse: evacúa hacia espacios abiertos y monitorea posibles réplicas o bloqueos viales.';
+    } else if (bajo.includes('huaico') || bajo.includes('deslizamiento') || bajo.includes('torrentera') || bajo.includes('aluvion')) {
+      titulo = 'ALERTA EN TORRENTERAS / LADERAS';
+      recomendacion = 'Evita cruzar cauces, badenes o puentes con incremento de caudal; desplázate hacia zonas elevadas y mantén vigilancia en sectores cercanos a torrenteras.';
+    } else if (bajo.includes('incendio')) {
+      titulo = 'RESPUESTA ANTE INCENDIO URBANO';
+      recomendacion = 'Evacúa en sentido contrario al humo, mantente cerca del nivel del suelo si hay humo denso y despeja las vías de acceso para unidades de respuesta.';
+    }
+
+    out.innerHTML = `
+      <div style="margin-bottom:4px;"><strong>[${titulo}]</strong> · ${hora} · Alertas activas: <strong>${actCount}</strong></div>
+      <div>${recomendacion}</div>
+    `;
+  }
+
+  function enlazarBotonesIaHibrida() {
+    const btnEnviar = document.getElementById('cafqBtnEnviarIA');
+    const btnResumen = document.getElementById('cafqBtnResumenIA');
+
+    if (btnEnviar && !btnEnviar.dataset.cafqHibrido) {
+      btnEnviar.dataset.cafqHibrido = '1';
+      btnEnviar.addEventListener('click', () => {
+        const val = document.getElementById('cafqPreguntaIA')?.value || '';
+        consultarIaHibrida(val);
+      });
+    }
+
+    if (btnResumen && !btnResumen.dataset.cafqHibrido) {
+      btnResumen.dataset.cafqHibrido = '1';
+      btnResumen.addEventListener('click', () => {
+        consultarIaHibrida('Resumen operativo de alertas y riesgos actuales en Arequipa');
+      });
+    }
+  }
+
+  function init() {
+    montarBarraIntensidadMapa();
+    enlazarBotonesIaHibrida();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 350));
+  } else {
+    setTimeout(init, 350);
+  }
+  setInterval(init, 2500);
+})();
+</script>
 </body>
 </html>
