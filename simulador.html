@@ -3484,5 +3484,446 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   setInterval(recolorearSvgPlanos, 1200);
 })();
 </script>
+<!-- Acoplamiento limpio de mejoras 1 a 6 sobre #adminSubnav, #mapAdmin, #listaBitacora y #listaAlertasActivasAdmin (Paleta LUNA) -->
+<style id="cafqAcoplamientoReal6Style">
+  .cafq-kpis-luna {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 12px;
+    max-width: 1220px;
+    margin: 12px auto 14px auto;
+    padding: 0 16px;
+  }
+
+  .cafq-kpi-card-luna {
+    background: rgba(2, 56, 89, 0.52);
+    border: 1px solid rgba(84, 172, 191, 0.35);
+    border-radius: 14px;
+    padding: 11px 14px;
+  }
+
+  .cafq-kpi-lbl-luna {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #54ACBF;
+    margin-bottom: 3px;
+  }
+
+  .cafq-kpi-val-luna {
+    font-size: 15px;
+    font-weight: 700;
+    color: #A7EBF2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cafq-onda-leaflet {
+    border-radius: 50%;
+    border: 2px solid #A7EBF2;
+    background: rgba(84, 172, 191, 0.24);
+    animation: cafqPulsoOnda 2.2s infinite ease-out;
+    pointer-events: none;
+  }
+
+  @keyframes cafqPulsoOnda {
+    0% { transform: scale(0.45); opacity: 0.95; }
+    70% { transform: scale(1.65); opacity: 0.28; }
+    100% { transform: scale(2.0); opacity: 0; }
+  }
+
+  details.cafq-riesgos-acordeon {
+    margin: 12px 0;
+    border-radius: 14px;
+    border: 1px solid rgba(84, 172, 191, 0.38);
+    background: rgba(1, 28, 64, 0.72);
+    overflow: hidden;
+  }
+
+  details.cafq-riesgos-acordeon > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #A7EBF2;
+    background: rgba(2, 56, 89, 0.68);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  details.cafq-riesgos-acordeon > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cafq-riesgos-cuerpo {
+    padding: 12px 16px;
+  }
+
+  #cafqSeccionIALuna {
+    max-width: 1220px;
+    margin: 18px auto 40px;
+    padding: 0 16px;
+  }
+
+  .cafq-ia-panel-luna {
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(2, 56, 89, 0.52);
+    border: 1px solid rgba(84, 172, 191, 0.42);
+  }
+</style>
+
+<script>
+(function acoplarMejorasSinRomperEstructura() {
+  const ZONAS_AQP = [
+    { nombre: 'Cercado', lat: -16.3988, lng: -71.5369 },
+    { nombre: 'Cayma', lat: -16.3645, lng: -71.5520 },
+    { nombre: 'Torrentera', lat: -16.3645, lng: -71.5520 },
+    { nombre: 'Selva Alegre', lat: -16.3740, lng: -71.5165 },
+    { nombre: 'Yanahuara', lat: -16.3865, lng: -71.5455 },
+    { nombre: 'Anashuayco', lat: -16.3520, lng: -71.5650 }
+  ];
+
+  let circuloOnda = null;
+  let marcadorOnda = null;
+
+  function buscarInstanciaMapa() {
+    const candidatos = [window.mapAdmin, window.map, window.mapa];
+    for (const c of candidatos) {
+      if (c && typeof c.setView === 'function' && typeof c.addLayer === 'function') return c;
+    }
+    if (typeof L !== 'undefined' && L.Map) {
+      for (const k of Object.keys(window)) {
+        const v = window[k];
+        if (v instanceof L.Map) return v;
+      }
+    }
+    return null;
+  }
+
+  // 1. Onda expansiva en tiempo real sobre el mapa al ocurrir o seleccionar un evento
+  window.cafqDispararOndaMapa = function(lat, lng, etiqueta, altaSeveridad) {
+    const mapa = buscarInstanciaMapa();
+    const nLat = Number(lat) || -16.3988;
+    const nLng = Number(lng) || -71.5369;
+    const radio = altaSeveridad ? 4500 : 2600;
+
+    if (!mapa || typeof L === 'undefined') return;
+    try {
+      if (circuloOnda) mapa.removeLayer(circuloOnda);
+      if (marcadorOnda) mapa.removeLayer(marcadorOnda);
+
+      circuloOnda = L.circle([nLat, nLng], {
+        radius: radio,
+        color: '#A7EBF2',
+        weight: 2,
+        fillColor: '#54ACBF',
+        fillOpacity: 0.22
+      }).addTo(mapa);
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="cafq-onda-leaflet" style="width:32px;height:32px;margin-left:-16px;margin-top:-16px;"></div>`,
+        iconSize: [32, 32]
+      });
+
+      marcadorOnda = L.marker([nLat, nLng], { icon })
+        .addTo(mapa)
+        .bindPopup(`<strong>${etiqueta || 'Evento detectado'}</strong><br>Alcance estimado: ${(radio / 1000).toFixed(1)} km`)
+        .openPopup();
+
+      mapa.setView([nLat, nLng], 13, { animate: true });
+    } catch (_) {}
+  };
+
+  // 2 y 3. Clasificación visual clara + clic en evento centra el mapa
+  function enlazarEventosConMapa() {
+    const filas = document.querySelectorAll('#listaAlertasActivasAdmin > div, #listaBitacora > div, #listaBitacora li');
+    filas.forEach(fila => {
+      if (fila.dataset.cafqEnlazado === '1') return;
+      const txt = (fila.textContent || '').trim();
+      if (!txt || txt.length < 8) return;
+      fila.dataset.cafqEnlazado = '1';
+      fila.style.cursor = 'pointer';
+
+      if (!fila.querySelector('.cafq-tag-tipo')) {
+        const esSismo = /sismo|terremoto/i.test(txt);
+        const esHidrom = /deslizamiento|huaico|aluvion|inundacion/i.test(txt);
+        const tagTexto = esSismo ? 'Sismo · Profundidad y Magnitud' : (esHidrom ? 'Riesgo Hidrometeorológico' : 'Alerta Operativa');
+        const tag = document.createElement('span');
+        tag.className = 'cafq-tag-tipo';
+        tag.textContent = tagTexto;
+        tag.style.cssText = 'display:inline-block;margin-top:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(84,172,191,0.2);color:#A7EBF2;border:1px solid rgba(167,235,242,0.35);';
+        fila.appendChild(tag);
+      }
+
+      fila.addEventListener('click', (e) => {
+        if (e.target && e.target.closest('button')) return;
+        const zona = ZONAS_AQP.find(z => txt.toLowerCase().includes(z.nombre.toLowerCase())) || ZONAS_AQP[0];
+        window.cafqDispararOndaMapa(zona.lat, zona.lng, txt.slice(0, 60), /sismo|terremoto|grave|alta/i.test(txt));
+      });
+    });
+  }
+
+  // 4. Desplegable para historial / análisis de riesgos históricos sin ocupar toda la pantalla
+  function envolverBitacoraRiesgos() {
+    const bitacora = document.getElementById('listaBitacora');
+    if (!bitacora || bitacora.closest('details.cafq-riesgos-acordeon') || !bitacora.parentNode) return;
+
+    const details = document.createElement('details');
+    details.className = 'cafq-riesgos-acordeon';
+
+    const summary = document.createElement('summary');
+    summary.innerHTML = `<span>Historial y Análisis de Riesgos Históricos (Arequipa)</span><span>Expandir / Contraer</span>`;
+
+    const cuerpo = document.createElement('div');
+    cuerpo.className = 'cafq-riesgos-cuerpo';
+
+    bitacora.parentNode.insertBefore(details, bitacora);
+    cuerpo.appendChild(bitacora);
+    details.appendChild(summary);
+    details.appendChild(cuerpo);
+  }
+
+  // 5. Tarjetas de estado ordenadas arriba del contenido
+  function montarKpisOrdenados() {
+    if (document.getElementById('cafqKpisLuna')) return;
+    const subnav = document.getElementById('adminSubnav');
+    const ancla = subnav ? subnav.nextElementSibling : document.querySelector('section');
+    if (!ancla || !ancla.parentNode) return;
+
+    const box = document.createElement('div');
+    box.id = 'cafqKpisLuna';
+    box.className = 'cafq-kpis-luna';
+    box.innerHTML = `
+      <div class="cafq-kpi-card-luna">
+        <div class="cafq-kpi-lbl-luna">Operación</div>
+        <div class="cafq-kpi-val-luna">Autónoma Continua</div>
+      </div>
+      <div class="cafq-kpi-card-luna">
+        <div class="cafq-kpi-lbl-luna">Alertas Activas</div>
+        <div class="cafq-kpi-val-luna" id="cafqKpiNumActivas">0</div>
+      </div>
+      <div class="cafq-kpi-card-luna">
+        <div class="cafq-kpi-lbl-luna">Hora Local</div>
+        <div class="cafq-kpi-val-luna" id="cafqKpiReloj">--:--:--</div>
+      </div>
+      <div class="cafq-kpi-card-luna">
+        <div class="cafq-kpi-lbl-luna">Zona Base</div>
+        <div class="cafq-kpi-val-luna">Arequipa · Mapa & Riesgos</div>
+      </div>
+    `;
+    ancla.parentNode.insertBefore(box, ancla);
+
+    setInterval(() => {
+      const reloj = document.getElementById('cafqKpiReloj');
+      const numAct = document.getElementById('cafqKpiNumActivas');
+      const badge = document.getElementById('badgeAlertasActivasAdmin');
+      if (reloj) reloj.textContent = new Date().toLocaleTimeString('es-PE', { hour12: false });
+      if (numAct && badge) numAct.textContent = badge.textContent || '0';
+    }, 1000);
+  }
+
+  // 6. Botón/pestaña IA al final en #adminSubnav (Mapa -> Alertas -> Riesgos -> IA)
+  function acoplarPestanaIAEnSubnav() {
+    const subnav = document.getElementById('adminSubnav');
+    if (!subnav || document.getElementById('cafqSeccionIALuna')) return;
+
+    const secIA = document.createElement('section');
+    secIA.id = 'cafqSeccionIALuna';
+    secIA.style.display = 'none';
+    secIA.innerHTML = `
+      <div class="cafq-ia-panel-luna">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#54ACBF;">MÓDULO DE ASISTENCIA IA</div>
+            <h3 style="margin:2px 0 0 0;color:#A7EBF2;font-size:18px;">Análisis y Recomendaciones de Riesgo</h3>
+          </div>
+          <button type="button" id="cafqBtnResumenIA">Analizar Situación Actual</button>
+        </div>
+        <p style="margin:0 0 12px 0;font-size:13px;color:#A7EBF2;">
+          Consulta pautas preventivas y síntesis del estado de alertas en Arequipa de forma rápida.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <input id="cafqPreguntaIA" type="text" placeholder="Ej. Protocolo ante sismo o activación de torrentera..." style="flex:1;min-width:220px;padding:9px 12px;border-radius:10px;" />
+          <button type="button" id="cafqBtnEnviarIA">Consultar</button>
+        </div>
+        <div id="cafqSalidaIA" style="padding:12px 14px;border-radius:12px;background:rgba(1,28,64,0.85);border:1px solid rgba(84,172,191,0.35);font-size:13px;line-height:1.5;color:#A7EBF2;">
+          Listo para orientar sobre alertas, zonas de riesgo y protocolos preventivos.
+        </div>
+      </div>
+    `;
+
+    const secSimStats = document.getElementById('secSimuladorStatsAdmin');
+    if (secSimStats && secSimStats.parentNode) {
+      secSimStats.parentNode.insertBefore(secIA, secSimStats.nextSibling);
+    } else {
+      document.body.appendChild(secIA);
+    }
+
+    let btnIA = document.getElementById('cafqTabIA');
+    if (!btnIA) {
+      btnIA = document.createElement('button');
+      btnIA.id = 'cafqTabIA';
+      btnIA.type = 'button';
+      btnIA.textContent = 'IA';
+      const refBtn = subnav.querySelector('button');
+      if (refBtn && refBtn.className) btnIA.className = refBtn.className;
+      subnav.appendChild(btnIA);
+    }
+
+    const seccionesPrincipales = ['secAlertasAdmin', 'secSimuladorStatsAdmin', 'secEstadisticasAdmin', 'cardControl', 'secSimuladorAlertaAdmin'];
+
+    function actualizarRespuestaIA(textoConsulta) {
+      const q = (textoConsulta || '').toLowerCase();
+      const act = document.getElementById('badgeAlertasActivasAdmin')?.textContent || '0';
+      let msg = 'Verifica vías despejadas, zonas seguras en altura y mantén los canales de emergencia habilitados.';
+      if (q.includes('sismo') || q.includes('temblor')) {
+        msg = 'Sismo: busca zona segura lejos de vidrios o cornisas, evacúa a espacio abierto tras el movimiento y atiende reportes de réplicas.';
+      } else if (q.includes('huaico') || q.includes('deslizamiento') || q.includes('torrentera')) {
+        msg = 'Deslizamiento / Torrentera: evita cauces y bordes inestables, desplázate hacia zonas altas y vigila acumulaciones de agua y lodo.';
+      } else if (q.includes('incendio')) {
+        msg = 'Incendio: evacúa en sentido opuesto al humo, mantente cerca del suelo si hay densidades altas y facilita el paso de bomberos.';
+      }
+      const out = document.getElementById('cafqSalidaIA');
+      if (out) {
+        out.innerHTML = `<strong>Síntesis (${new Date().toLocaleTimeString('es-PE', { hour12: false })}):</strong> Alertas activas: <strong>${act}</strong>. ${msg}`;
+      }
+    }
+
+    document.getElementById('cafqBtnResumenIA')?.addEventListener('click', () => actualizarRespuestaIA('resumen'));
+    document.getElementById('cafqBtnEnviarIA')?.addEventListener('click', () => {
+      actualizarRespuestaIA(document.getElementById('cafqPreguntaIA')?.value || '');
+    });
+
+    btnIA.addEventListener('click', () => {
+      seccionesPrincipales.forEach(id => {
+        const s = document.getElementById(id);
+        if (s) s.dataset.cafqPrevDisplay = s.style.display;
+        if (s) s.style.display = 'none';
+      });
+      secIA.style.display = 'block';
+      actualizarRespuestaIA('estado');
+    });
+
+    subnav.querySelectorAll('button').forEach(b => {
+      if (b.id !== 'cafqTabIA') {
+        b.addEventListener('click', () => {
+          secIA.style.display = 'none';
+        });
+      }
+    });
+  }
+
+  function ejecutarAcoplamiento() {
+    montarKpisOrdenados();
+    enlazarEventosConMapa();
+    envolverBitacoraRiesgos();
+    acoplarPestanaIAEnSubnav();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(ejecutarAcoplamiento, 250));
+  } else {
+    setTimeout(ejecutarAcoplamiento, 250);
+  }
+  setInterval(() => {
+    enlazarEventosConMapa();
+    envolverBitacoraRiesgos();
+  }, 2500);
+})();
+</script>
+<script>
+(function conectarTodoFlujoInterno() {
+  if (window.__cafqTodoConectado) return;
+  window.__cafqTodoConectado = true;
+
+  const COORD_ZONAS = [
+    { clave: 'cercado', lat: -16.3988, lng: -71.5369 },
+    { clave: 'cayma', lat: -16.3645, lng: -71.5520 },
+    { clave: 'torrentera', lat: -16.3645, lng: -71.5520 },
+    { clave: 'selva alegre', lat: -16.3740, lng: -71.5165 },
+    { clave: 'yanahuara', lat: -16.3865, lng: -71.5455 },
+    { clave: 'anashuayco', lat: -16.3520, lng: -71.5650 },
+    { clave: 'socabaya', lat: -16.4530, lng: -71.5290 }
+  ];
+
+  function dispararOndaPorTexto(texto, esGrave) {
+    if (typeof window.cafqDispararOndaMapa !== 'function') return;
+    const bajo = (texto || '').toLowerCase();
+    const zona = COORD_ZONAS.find(z => bajo.includes(z.clave)) || COORD_ZONAS[0];
+    const grave = Boolean(esGrave) || /sismo|terremoto|huaico|deslizamiento|incendio|aluvion|grave|alta/i.test(bajo);
+    window.cafqDispararOndaMapa(zona.lat, zona.lng, (texto || 'Evento activo').slice(0, 65), grave);
+  }
+
+  function refrescarKpisYConexiones() {
+    const badge = document.getElementById('badgeAlertasActivasAdmin');
+    const itemsActivos = document.querySelectorAll('#listaAlertasActivasAdmin > div').length;
+    const totalActivas = badge ? (badge.textContent || String(itemsActivos)) : String(itemsActivos);
+
+    const kpiAct = document.getElementById('cafqKpiNumActivas');
+    if (kpiAct) kpiAct.textContent = totalActivas;
+
+    const kpiReloj = document.getElementById('cafqKpiReloj');
+    if (kpiReloj) kpiReloj.textContent = new Date().toLocaleTimeString('es-PE', { hour12: false });
+
+    document.querySelectorAll('#listaAlertasActivasAdmin > div, #listaBitacora > div, #listaBitacora li').forEach(el => {
+      if (el.dataset.cafqConectorListo === '1') return;
+      el.dataset.cafqConectorListo = '1';
+      el.addEventListener('click', (ev) => {
+        if (ev.target && ev.target.closest('button')) return;
+        dispararOndaPorTexto(el.textContent || '', false);
+      });
+    });
+  }
+
+  // Conectar botón de simulación / activación para que dispare onda en el mapa y actualice todo
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target && ev.target.closest('button');
+    if (!btn) return;
+    const txt = (btn.textContent || '').trim().toLowerCase();
+    if (txt.includes('simular') || txt.includes('activar') || txt.includes('pulso')) {
+      const descInput = document.querySelector('input[placeholder*="simula" i], input[placeholder*="descrip" i], textarea');
+      const selectZona = document.querySelector('select');
+      const contexto = [
+        selectZona ? selectZona.value : '',
+        descInput ? descInput.value : '',
+        txt
+      ].filter(Boolean).join(' · ');
+
+      setTimeout(() => {
+        dispararOndaPorTexto(contexto, true);
+        refrescarKpisYConexiones();
+        if (typeof window.cargarAlertasActivasAdmin === 'function') {
+          window.cargarAlertasActivasAdmin();
+        }
+      }, 120);
+    }
+  });
+
+  // Conectar pestaña IA para que al abrirse lea el estado actual y dispare contexto
+  const btnIA = document.getElementById('cafqTabIA');
+  if (btnIA && !btnIA.dataset.cafqIaConectado) {
+    btnIA.dataset.cafqIaConectado = '1';
+    btnIA.addEventListener('click', () => {
+      setTimeout(() => {
+        const btnResumen = document.getElementById('cafqBtnResumenIA');
+        if (btnResumen) btnResumen.click();
+      }, 60);
+    });
+  }
+
+  setInterval(refrescarKpisYConexiones, 1500);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(refrescarKpisYConexiones, 300));
+  } else {
+    setTimeout(refrescarKpisYConexiones, 300);
+  }
+})();
+</script>
 </body>
 </html>
