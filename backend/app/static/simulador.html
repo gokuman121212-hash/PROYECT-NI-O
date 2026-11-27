@@ -2522,5 +2522,226 @@ async function simularAlertaAdmin() {
   }
 })();
 </script>
+<!--
+From Uiverse.io by gharsh11032000 - https://uiverse.io/gharsh11032000/loud-chicken-53
+MIT License, Copyright (c) gharsh11032000 (Harsh Gupta)
+-->
+<style id="cafqAdminPolishAndUiverseStyle">
+  .cafq-uiverse-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 13px 30px;
+    border: 4px solid transparent;
+    font-size: 14px;
+    background-color: #14171c;
+    border-radius: 100px;
+    font-weight: 600;
+    color: greenyellow;
+    box-shadow: 0 0 0 2px greenyellow;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-uiverse-btn svg {
+    position: absolute;
+    width: 22px;
+    fill: greenyellow;
+    z-index: 9;
+    transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-uiverse-btn .cafq-uiverse-arr-1 {
+    right: 14px;
+  }
+
+  .cafq-uiverse-btn .cafq-uiverse-arr-2 {
+    left: -25%;
+  }
+
+  .cafq-uiverse-btn .cafq-uiverse-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background-color: greenyellow;
+    border-radius: 50%;
+    opacity: 0;
+    transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-uiverse-btn .cafq-uiverse-text {
+    position: relative;
+    z-index: 1;
+    transform: translateX(-10px);
+    transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    white-space: nowrap;
+  }
+
+  .cafq-uiverse-btn:hover {
+    box-shadow: 0 0 0 12px transparent;
+    color: #212121;
+    border-radius: 12px;
+  }
+
+  .cafq-uiverse-btn:hover .cafq-uiverse-arr-1 {
+    right: -25%;
+  }
+
+  .cafq-uiverse-btn:hover .cafq-uiverse-arr-2 {
+    left: 14px;
+  }
+
+  .cafq-uiverse-btn:hover .cafq-uiverse-text {
+    transform: translateX(10px);
+  }
+
+  .cafq-uiverse-btn:hover svg {
+    fill: #212121;
+  }
+
+  .cafq-uiverse-btn:active {
+    scale: 0.95;
+    box-shadow: 0 0 0 4px greenyellow;
+  }
+
+  .cafq-uiverse-btn:hover .cafq-uiverse-circle {
+    width: 220px;
+    height: 220px;
+    opacity: 1;
+  }
+
+  #secSimuladorStatsAdmin .stats-card,
+  #secAlertasAdmin .stats-card,
+  #secEstadisticasAdmin .stats-card {
+    background: linear-gradient(180deg, rgba(28, 32, 39, 0.96) 0%, rgba(20, 23, 28, 0.98) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  }
+
+  .cafq-admin-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(14, 17, 22, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+</style>
+
+<script>
+(function automatizarYMejorarAdministrador() {
+  const MAX_EVENTOS_HISTORIAL = 120;
+  const CLAVES = [
+    'alertacayma_simulaciones_permanentes_v1',
+    'alertacayma_simulador_alertas_v1',
+    'alertacayma_alertas_activas_internas_v1'
+  ];
+
+  function podarHistorialSiExcede() {
+    CLAVES.forEach(clave => {
+      try {
+        const raw = localStorage.getItem(clave);
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length > MAX_EVENTOS_HISTORIAL) {
+          localStorage.setItem(clave, JSON.stringify(arr.slice(-MAX_EVENTOS_HISTORIAL)));
+        }
+      } catch (_) {}
+    });
+  }
+
+  window.limpiarSimulacionesAcumuladas = function() {
+    CLAVES.forEach(clave => {
+      try { localStorage.removeItem(clave); } catch (_) {}
+    });
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+    if (typeof window.cargarAlertasActivasAdmin === 'function') {
+      window.cargarAlertasActivasAdmin();
+    }
+  };
+
+  window.accionRapidaUiverseAdmin = async function() {
+    if (typeof window.simularAlertaAdmin === 'function') {
+      await window.simularAlertaAdmin();
+    }
+    podarHistorialSiExcede();
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+    if (typeof window.cargarAlertasActivasAdmin === 'function') {
+      window.cargarAlertasActivasAdmin();
+    }
+  };
+
+  function inyectarBarraAccionesAdmin() {
+    const secSim = document.getElementById('secSimuladorStatsAdmin');
+    if (!secSim) return;
+    const card = secSim.querySelector('.stats-card');
+    if (!card || document.getElementById('cafqBarraAccionesAdmin')) return;
+
+    const barra = document.createElement('div');
+    barra.id = 'cafqBarraAccionesAdmin';
+    barra.className = 'cafq-admin-action-bar';
+    barra.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(34,197,94,0.14);color:#4ADE80;font-size:12px;font-weight:700;">
+          ● Automatización Activa
+        </span>
+        <span style="font-size:12px;color:#9CA3AF;">
+          Historial limitado automáticamente a los últimos ${MAX_EVENTOS_HISTORIAL} registros para mantener fluidez.
+        </span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+        <button type="button" onclick="limpiarSimulacionesAcumuladas()"
+                style="padding:9px 14px;border-radius:10px;border:1px solid rgba(248,113,113,0.45);background:rgba(239,68,68,0.12);color:#FCA5A5;font-size:12px;font-weight:700;cursor:pointer;">
+          Limpiar Historial Simulado
+        </button>
+        <button type="button" class="cafq-uiverse-btn" onclick="accionRapidaUiverseAdmin()">
+          <svg viewBox="0 0 24 24" class="cafq-uiverse-arr-2" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+          </svg>
+          <span class="cafq-uiverse-text">Pulso Simulación</span>
+          <span class="cafq-uiverse-circle"></span>
+          <svg viewBox="0 0 24 24" class="cafq-uiverse-arr-1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+    const subtitulo = card.querySelector('p');
+    if (subtitulo && subtitulo.parentNode) {
+      subtitulo.parentNode.insertBefore(barra, subtitulo.nextSibling);
+    } else {
+      card.prepend(barra);
+    }
+  }
+
+  setInterval(() => {
+    podarHistorialSiExcede();
+  }, 5000);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      podarHistorialSiExcede();
+      inyectarBarraAccionesAdmin();
+    });
+  } else {
+    podarHistorialSiExcede();
+    inyectarBarraAccionesAdmin();
+  }
+})();
+</script>
 </body>
 </html>
