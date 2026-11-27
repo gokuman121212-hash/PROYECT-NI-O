@@ -1894,7 +1894,7 @@ fun PantallaPrincipalArequipa(
                             focusedContainerColor = FondoOscuroSerio,
                             unfocusedContainerColor = FondoOscuroSerio,
                             focusedBorderColor = NaranjaFuegoSerio,
-                            unfocusedBorderColor = PlataAceroSerio.copy(alpha = 0.55f),
+                            unfocusedBorderColor = PlataAceroSerio,
                             focusedLabelColor = NaranjaFuegoSerio,
                             unfocusedLabelColor = PlataAceroSerio
                         ),
