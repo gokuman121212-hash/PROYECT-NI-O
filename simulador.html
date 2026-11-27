@@ -2843,5 +2843,253 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta)
   }
 })();
 </script>
+<!--
+From Uiverse.io by gharsh11032000 - https://uiverse.io/gharsh11032000/loud-chicken-53
+MIT License, Copyright (c) gharsh11032000 (Harsh Gupta)
+-->
+<style id="cafqBotonesAnimadosTodaPaginaStyle">
+  .cafq-page-anim-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 22px;
+    border: 3px solid transparent;
+    font-size: 13px;
+    background-color: #14171c;
+    border-radius: 100px;
+    font-weight: 600;
+    color: greenyellow;
+    box-shadow: 0 0 0 1.5px greenyellow;
+    cursor: pointer;
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.55s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-page-anim-btn--compact {
+    padding: 7px 15px;
+    font-size: 12px;
+    border-width: 2px;
+  }
+
+  .cafq-page-anim-btn svg {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    fill: greenyellow;
+    z-index: 9;
+    transition: all 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-page-anim-btn .cafq-btn-arr-1 {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .cafq-page-anim-btn .cafq-btn-arr-2 {
+    position: absolute;
+    left: -24px;
+    opacity: 0;
+  }
+
+  .cafq-page-anim-btn .cafq-btn-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    background-color: greenyellow;
+    border-radius: 50%;
+    opacity: 0;
+    z-index: 1;
+    transition: all 0.75s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .cafq-page-anim-btn .cafq-btn-label {
+    position: relative;
+    z-index: 5;
+    transform: translateX(-3px);
+    transition: all 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+    white-space: nowrap;
+  }
+
+  .cafq-page-anim-btn:hover {
+    box-shadow: 0 0 0 10px transparent;
+    color: #212121;
+    border-radius: 12px;
+  }
+
+  .cafq-page-anim-btn:hover .cafq-btn-arr-1 {
+    transform: translateX(22px);
+    opacity: 0;
+  }
+
+  .cafq-page-anim-btn:hover .cafq-btn-arr-2 {
+    left: 11px;
+    opacity: 1;
+  }
+
+  .cafq-page-anim-btn:hover .cafq-btn-label {
+    transform: translateX(9px);
+  }
+
+  .cafq-page-anim-btn:hover svg {
+    fill: #212121;
+  }
+
+  .cafq-page-anim-btn:active {
+    scale: 0.95;
+    box-shadow: 0 0 0 4px greenyellow;
+  }
+
+  .cafq-page-anim-btn:hover .cafq-btn-circle {
+    width: 240px;
+    height: 240px;
+    opacity: 1;
+  }
+
+  .cafq-page-anim-btn.is-active-tab {
+    background-color: greenyellow;
+    color: #14171c;
+    box-shadow: 0 0 0 2px greenyellow, 0 0 16px rgba(173, 255, 47, 0.35);
+  }
+
+  .cafq-page-anim-btn.is-active-tab svg {
+    fill: #14171c;
+  }
+</style>
+
+<script>
+(function aplicarEstiloBotonesEnTodaLaPagina() {
+  const FLECHA_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path></svg>`;
+
+  function estilizarBoton(btn) {
+    if (!btn || btn.dataset.cafqStyled === '1') return;
+    if (btn.classList.contains('cafq-uiverse-btn')) {
+      btn.dataset.cafqStyled = '1';
+      return;
+    }
+
+    const textoLimpio = (btn.textContent || '').trim();
+    if (!textoLimpio) return;
+
+    const esCompacto = btn.offsetHeight > 0 && btn.offsetHeight < 40 ||
+      Boolean(btn.closest('table, nav, .admin-subnav, #adminSubnav'));
+
+    btn.dataset.cafqStyled = '1';
+    btn.classList.add('cafq-page-anim-btn');
+    if (esCompacto) {
+      btn.classList.add('cafq-page-anim-btn--compact');
+    }
+
+    // Limpiar estilos en línea conflictivos de fondo/borde para respetar el diseño unificado
+    btn.style.background = '';
+    btn.style.backgroundColor = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+
+    btn.innerHTML = `
+      <span class="cafq-btn-arr-2">${FLECHA_SVG}</span>
+      <span class="cafq-btn-label">${textoLimpio}</span>
+      <span class="cafq-btn-circle"></span>
+      <span class="cafq-btn-arr-1">${FLECHA_SVG}</span>
+    `;
+  }
+
+  function sincronizarEstadoPestanas() {
+    document.querySelectorAll('#adminSubnav .admin-subnav-btn, .cafq-page-anim-btn').forEach(b => {
+      const marcada = b.classList.contains('active') || b.getAttribute('aria-selected') === 'true';
+      b.classList.toggle('is-active-tab', marcada);
+    });
+  }
+
+  function aplicarATodos() {
+    document.querySelectorAll('button').forEach(estilizarBoton);
+    sincronizarEstadoPestanas();
+  }
+
+  const observer = new MutationObserver(() => {
+    aplicarATodos();
+  });
+
+  function init() {
+    aplicarATodos();
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    }
+    setTimeout(aplicarATodos, 400);
+    setTimeout(aplicarATodos, 1500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+<script>
+(function moverSimuladorAlertaCiudadanaArriba() {
+  function reubicarTarjetaSimCiudadana() {
+    const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, div, strong, span'));
+    const tituloEl = headings.find(el =>
+      el.children.length === 0 &&
+      /SIMULADOR DE ALERTA CIUDADANA/i.test((el.textContent || '').trim())
+    );
+    if (!tituloEl) return;
+
+    // Subir hasta el contenedor/tarjeta que envuelve todo el bloque del simulador ciudadano
+    let tarjetaSim = tituloEl;
+    for (let i = 0; i < 6 && tarjetaSim.parentElement; i++) {
+      const parent = tarjetaSim.parentElement;
+      const tieneBoton = Boolean(parent.querySelector('button'));
+      const tieneSelect = Boolean(parent.querySelector('select'));
+      if (tieneBoton && tieneSelect) {
+        tarjetaSim = parent;
+        break;
+      }
+      tarjetaSim = parent;
+    }
+
+    const secAdmin = document.getElementById('secSimuladorAlertaAdmin') || tarjetaSim.parentElement;
+    if (!secAdmin || !tarjetaSim || tarjetaSim.dataset.cafqMovidoArriba === '1') return;
+
+    // Buscar la tarjeta de ubicación/mapa para colocar el simulador ciudadano justo antes
+    const mapaEl = document.querySelector('#map, .leaflet-container, [id*="mapa"], [id*="Mapa"]');
+    let tarjetaMapa = mapaEl;
+    for (let i = 0; i < 6 && tarjetaMapa && tarjetaMapa.parentElement; i++) {
+      if (tarjetaMapa.parentElement === secAdmin) {
+        tarjetaMapa = tarjetaMapa;
+        break;
+      }
+      if (tarjetaMapa.parentElement.parentElement === secAdmin) {
+        tarjetaMapa = tarjetaMapa.parentElement;
+        break;
+      }
+      tarjetaMapa = tarjetaMapa.parentElement;
+    }
+
+    if (tarjetaMapa && tarjetaMapa !== tarjetaSim && tarjetaMapa.parentNode === secAdmin) {
+      secAdmin.insertBefore(tarjetaSim, tarjetaMapa);
+      tarjetaSim.dataset.cafqMovidoArriba = '1';
+    } else if (secAdmin.firstElementChild && secAdmin.firstElementChild !== tarjetaSim) {
+      const segundoHijo = secAdmin.children[1] || null;
+      secAdmin.insertBefore(tarjetaSim, segundoHijo);
+      tarjetaSim.dataset.cafqMovidoArriba = '1';
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(reubicarTarjetaSimCiudadana, 150));
+  } else {
+    setTimeout(reubicarTarjetaSimCiudadana, 150);
+  }
+  setTimeout(reubicarTarjetaSimCiudadana, 800);
+})();
+</script>
 </body>
 </html>
