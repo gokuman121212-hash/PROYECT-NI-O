@@ -435,7 +435,38 @@
   <button type="button" class="admin-subnav-btn" data-target="estadisticas" onclick="cambiarApartadoAdmin('estadisticas')">
     Estadísticas
   </button>
+  <button type="button" class="admin-subnav-btn" data-target="alertas" onclick="cambiarApartadoAdmin('alertas')">
+    Alertas (<span id="badgeAlertasActivasAdmin">0</span>)
+  </button>
 </nav>
+
+
+<section id="secAlertasAdmin" style="max-width:1220px;margin:18px auto 40px;padding:0 16px;display:none;">
+  <div class="stats-card">
+    <div class="section-tag">Control de Emergencias en Curso</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:18px;">Alertas Activas en Tiempo Real</h2>
+        <p style="margin:0;font-size:13px;color:var(--text-muted,#9CA3AF);">
+          Revisa las alertas activas emitidas y detén cualquiera si resulta ser falsa alarma o ya fue atendida.
+        </p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input id="adminAlertasBackendUrl" type="text" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000"
+               style="padding:8px 10px;border-radius:8px;border:1px solid var(--border,#2F3540);background:#121417;color:#F9FAFB;font-size:12px;min-width:210px;" />
+        <button type="button" class="stats-btn-primary" onclick="cargarAlertasActivasAdmin()">Refrescar Alertas</button>
+      </div>
+    </div>
+    <div id="adminAlertasEstadoMsg" style="font-size:12px;color:var(--text-muted,#9CA3AF);margin-bottom:10px;">
+      Mostrando alertas activas actuales.
+    </div>
+    <div id="listaAlertasActivasAdmin" style="display:grid;gap:10px;">
+      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">
+        Abre la pestaña "Alertas" o pulsa "Refrescar Alertas" para cargar las alertas activas.
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="secEstadisticasAdmin">
   <div class="stats-card">
@@ -1041,5 +1072,112 @@ async function simularAlertaAdmin() {
 }
 </script>
 <!-- ===== FIN SIMULADOR DE ALERTA EN PANEL ADMINISTRADOR ===== -->
+<script>
+(function initPestanaAlertasAdmin() {
+  function obtenerBaseUrlAlertasAdmin() {
+    const input = document.getElementById('adminAlertasBackendUrl');
+    const statsInput = document.getElementById('statsBackendUrl');
+    const raw = (input && input.value.trim()) || (statsInput && statsInput.value.trim()) || 'http://127.0.0.1:8000';
+    return raw.replace(/\/+$/, '');
+  }
+
+  function actualizarBadgeAlertasAdmin(cantidad) {
+    const badge = document.getElementById('badgeAlertasActivasAdmin');
+    if (badge) badge.textContent = String(cantidad);
+  }
+
+  window.cargarAlertasActivasAdmin = async function() {
+    const cont = document.getElementById('listaAlertasActivasAdmin');
+    const msg = document.getElementById('adminAlertasEstadoMsg');
+    if (!cont) return;
+    const baseUrl = obtenerBaseUrlAlertasAdmin();
+    if (msg) msg.textContent = `Consultando alertas activas en ${baseUrl}...`;
+
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/alertas/mapa-calor`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const puntos = Array.isArray(data.puntos) ? data.puntos : [];
+      const activas = puntos.filter(p => (p.estado || 'ACTIVA').toUpperCase() !== 'ARCHIVADA');
+      actualizarBadgeAlertasAdmin(activas.length);
+
+      if (msg) msg.textContent = `Alertas activas en este momento: ${activas.length} (${new Date().toLocaleTimeString()})`;
+
+      if (!activas.length) {
+        cont.innerHTML = `<div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">No hay alertas activas en este momento.</div>`;
+        return;
+      }
+
+      cont.innerHTML = activas.map(al => {
+        const id = String(al.alerta_id || '');
+        const tipo = String(al.categoria || al.tipo || 'EMERGENCIA').toUpperCase();
+        const usuario = String(al.nombre_usuario || 'Vecino Arequipa');
+        const distrito = String(al.distrito || 'Arequipa');
+        const sector = String(al.sector_referencia || '');
+        const desc = String(al.descripcion || 'Alerta activa reportada.');
+        return `
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+            <div style="flex:1;min-width:240px;">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px;">
+                <span style="padding:2px 8px;border-radius:999px;background:rgba(239,68,68,0.18);color:#F87171;font-weight:700;font-size:11px;">${tipo}</span>
+                <strong style="font-size:14px;color:#F9FAFB;">${usuario} — ${distrito}</strong>
+                <span style="font-size:11px;color:#9CA3AF;">ID: ${id}</span>
+              </div>
+              <div style="font-size:13px;color:#D1D5DB;margin-bottom:3px;">${desc}</div>
+              ${sector ? `<div style="font-size:12px;color:#9CA3AF;">Sector: ${sector}</div>` : ''}
+            </div>
+            <button type="button" onclick="detenerAlertaAdmin('${id.replace(/'/g, "\\'")}')"
+                    style="padding:9px 14px;border-radius:10px;border:1px solid #EF4444;background:rgba(239,68,68,0.16);color:#FCA5A5;font-weight:700;font-size:12px;cursor:pointer;">
+              Detener alerta
+            </button>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      if (msg) msg.textContent = `No se pudo conectar con ${baseUrl} (${err.message}). Verifica que el backend esté encendido.`;
+    }
+  };
+
+  window.detenerAlertaAdmin = async function(alertaId) {
+    if (!alertaId) return;
+    if (!confirm(`¿Detener y archivar la alerta ${alertaId} por falsa alarma o cierre?`)) return;
+    const baseUrl = obtenerBaseUrlAlertasAdmin();
+    const msg = document.getElementById('adminAlertasEstadoMsg');
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/alertas/${encodeURIComponent(alertaId)}/archivar`, {
+        method: 'PATCH'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (msg) msg.textContent = `Alerta ${alertaId} detenida/archivada correctamente.`;
+      await window.cargarAlertasActivasAdmin();
+      if (typeof window.actualizarPanelEstadisticas === 'function') {
+        window.actualizarPanelEstadisticas();
+      }
+    } catch (err) {
+      if (msg) msg.textContent = `Error al detener alerta ${alertaId}: ${err.message}`;
+    }
+  };
+
+  const origCambiarApartado = window.cambiarApartadoAdmin;
+  window.cambiarApartadoAdmin = function(apartado) {
+    if (typeof origCambiarApartado === 'function') {
+      origCambiarApartado(apartado);
+    }
+    document.querySelectorAll('#adminSubnav .admin-subnav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.target === apartado);
+    });
+    const secAlertas = document.getElementById('secAlertasAdmin');
+    const secStats = document.getElementById('secEstadisticasAdmin');
+    if (secAlertas) secAlertas.style.display = (apartado === 'alertas') ? 'block' : 'none';
+    if (secStats && apartado === 'alertas') secStats.style.display = 'none';
+    document.querySelectorAll('main').forEach(m => {
+      if (apartado === 'alertas') m.style.display = 'none';
+    });
+    if (apartado === 'alertas') {
+      window.cargarAlertasActivasAdmin();
+    }
+  };
+})();
+</script>
 </body>
 </html>

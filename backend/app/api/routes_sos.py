@@ -1,4 +1,4 @@
-﻿import random
+import random
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from slowapi import Limiter
@@ -139,4 +139,18 @@ async def health_check():
         "supabase_conectado": db_manager.supabase_ready
     }
 
-
+@router.patch("/{alerta_id}/archivar")
+async def archivar_o_detener_alerta(alerta_id: str, motivo: str = "Falsa alarma / Detenida por administrador"):
+    await db_manager.actualizar_estado_alerta(alerta_id, EstadoAlerta.ARCHIVADA.value)
+    await ws_manager.broadcast({
+        "evento": "ALERTA_ARCHIVADA",
+        "alerta_id": alerta_id,
+        "estado": EstadoAlerta.ARCHIVADA.value,
+        "motivo": motivo
+    })
+    return {
+        "ok": True,
+        "alerta_id": alerta_id,
+        "estado": EstadoAlerta.ARCHIVADA.value,
+        "motivo": motivo
+    }
