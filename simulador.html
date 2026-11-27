@@ -3925,5 +3925,128 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   }
 })();
 </script>
+<script>
+(function potenciarIaYFiltroRiesgos() {
+  if (window.__cafqIaYFiltroListo) return;
+  window.__cafqIaYFiltroListo = true;
+
+  function agregarBuscadorEnRiesgos() {
+    const acordeon = document.querySelector('details.cafq-riesgos-acordeon');
+    const cuerpo = acordeon ? acordeon.querySelector('.cafq-riesgos-cuerpo') : null;
+    if (!cuerpo || document.getElementById('cafqFiltroRiesgosInput')) return;
+
+    const input = document.createElement('input');
+    input.id = 'cafqFiltroRiesgosInput';
+    input.type = 'text';
+    input.placeholder = 'Filtrar historial por distrito, tipo o palabra clave (ej. Cayma, Sismo, Torrentera)...';
+    input.style.cssText = 'width:100%;margin-bottom:10px;padding:8px 12px;border-radius:10px;font-size:12px;';
+
+    cuerpo.prepend(input);
+
+    input.addEventListener('input', () => {
+      const q = (input.value || '').trim().toLowerCase();
+      const items = cuerpo.querySelectorAll('#listaBitacora > div, #listaBitacora li');
+      items.forEach(item => {
+        if (item === input) return;
+        const match = !q || (item.textContent || '').toLowerCase().includes(q);
+        item.style.display = match ? '' : 'none';
+      });
+    });
+  }
+
+  function mejorarPanelIA() {
+    const panel = document.querySelector('#cafqSeccionIALuna .cafq-ia-panel-luna');
+    if (!panel || document.getElementById('cafqChipsEscenariosIA')) return;
+
+    const chipsWrap = document.createElement('div');
+    chipsWrap.id = 'cafqChipsEscenariosIA';
+    chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
+
+    const escenarios = [
+      { label: 'Sismo en Arequipa', prompt: 'Protocolo y evaluación rápida ante sismo moderado o fuerte en Arequipa' },
+      { label: 'Huaico / Torrentera', prompt: 'Riesgo de deslizamiento o activación de torrentera en Cayma o Selva Alegre' },
+      { label: 'Incendio urbano', prompt: 'Acciones preventivas y evacuación ante incendio en zona urbana' },
+      { label: 'Estado del simulador', prompt: 'Resume el estado actual de alertas activas y monitoreo en la app' }
+    ];
+
+    escenarios.forEach(esc => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = esc.label;
+      btn.style.cssText = 'padding:6px 12px;border-radius:999px;font-size:12px;';
+      btn.addEventListener('click', () => {
+        const inp = document.getElementById('cafqPreguntaIA');
+        if (inp) inp.value = esc.prompt;
+        responderConContextoLocal(esc.prompt);
+      });
+      chipsWrap.appendChild(btn);
+    });
+
+    const salida = document.getElementById('cafqSalidaIA');
+    if (salida && salida.parentNode === panel) {
+      panel.insertBefore(chipsWrap, salida);
+    } else {
+      panel.appendChild(chipsWrap);
+    }
+
+    const btnEnviar = document.getElementById('cafqBtnEnviarIA');
+    const btnResumen = document.getElementById('cafqBtnResumenIA');
+
+    if (btnEnviar) {
+      btnEnviar.addEventListener('click', () => {
+        const q = document.getElementById('cafqPreguntaIA')?.value || '';
+        responderConContextoLocal(q);
+      });
+    }
+
+    if (btnResumen) {
+      btnResumen.addEventListener('click', () => {
+        responderConContextoLocal('resumen general de monitoreo y riesgos en arequipa');
+      });
+    }
+  }
+
+  function responderConContextoLocal(consulta) {
+    const out = document.getElementById('cafqSalidaIA');
+    if (!out) return;
+
+    const actCount = document.getElementById('cafqKpiNumActivas')?.textContent ||
+                     document.getElementById('badgeAlertasActivasAdmin')?.textContent || '0';
+    const hora = new Date().toLocaleTimeString('es-PE', { hour12: false });
+    const q = (consulta || '').toLowerCase();
+
+    let plan = 'Mantén rutas de evacuación libres, ubica zonas seguras despejadas y verifica el estado de las alertas activas.';
+    let nivel = 'MONITOREO PREVENTIVO';
+
+    if (q.includes('sismo') || q.includes('temblor')) {
+      nivel = 'PROTOCOLO SÍSMICO';
+      plan = 'Al percibir movimiento: aléjate de ventanas, estanterías o cables; tras detenerse, evacúa hacia zona abierta y vigila réplicas y vías bloqueadas.';
+    } else if (q.includes('huaico') || q.includes('deslizamiento') || q.includes('torrentera') || q.includes('aluvion')) {
+      nivel = 'RIESGO EN LADERAS / TORRENTERAS';
+      plan = 'No cruces cauces, torrenteras ni puentes con flujo; desplázate a zonas altas y mantén atención ante arrastre de lodo, piedras o cortes de tránsito.';
+    } else if (q.includes('incendio')) {
+      nivel = 'RESPUESTA ANTE INCENDIO';
+      plan = 'Evacúa en dirección contraria al humo, mantente bajo si hay presencia de humo denso y despeja accesos para unidades de emergencia.';
+    }
+
+    out.innerHTML = `
+      <div style="margin-bottom:4px;"><strong>[${nivel}]</strong> · Hora: <strong>${hora}</strong> · Alertas activas: <strong>${actCount}</strong></div>
+      <div>${plan}</div>
+    `;
+  }
+
+  function init() {
+    agregarBuscadorEnRiesgos();
+    mejorarPanelIA();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 300));
+  } else {
+    setTimeout(init, 300);
+  }
+  setInterval(agregarBuscadorEnRiesgos, 2500);
+})();
+</script>
 </body>
 </html>
