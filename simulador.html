@@ -1533,10 +1533,11 @@ async function simularAlertaAdmin() {
     if (btnIni) btnIni.disabled = true;
     if (btnDet) btnDet.disabled = false;
 
+    if (timerRegistroSim) {
+      clearInterval(timerRegistroSim);
+      timerRegistroSim = null;
+    }
     window.emitirAlertaSimuladaEnBD();
-    timerRegistroSim = setInterval(() => {
-      window.emitirAlertaSimuladaEnBD();
-    }, ms);
   };
 
   window.detenerRegistroSimuladorStats = function() {
@@ -1848,7 +1849,9 @@ async function simularAlertaAdmin() {
     setTxt('simCountMes', String(totalMes));
     setTxt('simCountAnual', String(totalAnual));
 
-    setHtml('simPlanoSegundoGrande', construirSvgInteractivo(itemsSegundo, '#38BDF8', 210, 960));
+    const haySim60s = eventos60s.some(e => Boolean(e.simulado || /simul/i.test(String(e.origen || e.tipo || e.id || ''))));
+    const colorGrafico60s = eventos60s.length ? (haySim60s ? '#A855F7' : '#EF4444') : '#A855F7';
+    setHtml('simPlanoSegundoGrande', construirSvgInteractivo(itemsSegundo, colorGrafico60s, 210, 960));
     setHtml('simPlanoHora', construirSvgInteractivo(itemsHora, '#FBBF24', 135, 300));
     setHtml('simPlanoDia', construirSvgInteractivo(itemsDia, '#F97316', 135, 280));
     setHtml('simPlanoSemana', construirSvgInteractivo(itemsSemana, '#38BDF8', 135, 280));
@@ -3435,13 +3438,18 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   };
 
   function recolorearSvgPlanos() {
+    const txtBitacora = (document.getElementById('simBitacoraSegundo')?.textContent || '').toLowerCase();
+    const esSimulacion = txtBitacora.includes('simulado') || txtBitacora.includes('simul') || Boolean(document.getElementById('secSimuladorStatsAdmin')?.style.display !== 'none');
+    const colorPrincipal = esSimulacion ? '#A855F7' : '#EF4444';
+    const colorSecundario = esSimulacion ? '#9333EA' : '#DC2626';
+
     const mapaIds = {
-      simPlanoSegundoGrande: PALETA.ice,
-      simPlanoHora: PALETA.aqua,
-      simPlanoDia: '#7ED8E6',
-      simPlanoSemana: PALETA.aqua,
-      simPlanoMes: '#68B8CF',
-      simPlanoAnual: PALETA.ice
+      simPlanoSegundoGrande: colorPrincipal,
+      simPlanoHora: colorPrincipal,
+      simPlanoDia: colorSecundario,
+      simPlanoSemana: colorPrincipal,
+      simPlanoMes: colorSecundario,
+      simPlanoAnual: colorPrincipal
     };
 
     Object.entries(mapaIds).forEach(([id, color]) => {
@@ -3449,9 +3457,13 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
       if (!box) return;
       box.querySelectorAll('svg').forEach(svg => {
         svg.style.background = PALETA.abyss;
-        svg.style.borderColor = PALETA.steel;
+        svg.style.borderColor = color;
         svg.querySelectorAll('polyline').forEach(pl => pl.setAttribute('stroke', color));
-        svg.querySelectorAll('polygon').forEach(pg => pg.setAttribute('fill', color));
+        svg.querySelectorAll('polygon').forEach(pg => {
+          const op = parseFloat(pg.getAttribute('fill-opacity') || '0.18');
+          pg.setAttribute('fill', color);
+          if (!Number.isNaN(op)) pg.setAttribute('fill-opacity', String(Math.min(0.28, Math.max(0.12, op))));
+        });
         svg.querySelectorAll('circle').forEach(ci => {
           const r = parseFloat(ci.getAttribute('r') || '0');
           if (r >= 2 && r <= 6) {
@@ -3465,8 +3477,8 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
     const tooltip = document.getElementById('simTooltipFlotante');
     if (tooltip) {
       tooltip.style.background = PALETA.abyss;
-      tooltip.style.borderColor = PALETA.aqua;
-      tooltip.style.color = PALETA.ice;
+      tooltip.style.borderColor = colorPrincipal;
+      tooltip.style.color = '#F9FAFB';
     }
   }
 
