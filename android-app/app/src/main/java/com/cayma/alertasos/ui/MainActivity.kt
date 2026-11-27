@@ -1900,7 +1900,6 @@ fun PantallaPrincipalArequipa(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    )
                 }
             },
             confirmButton = {
