@@ -1882,9 +1882,24 @@ fun PantallaPrincipalArequipa(
                     OutlinedTextField(
                         value = contextoAlertaEmitir,
                         onValueChange = { contextoAlertaEmitir = it },
+                        singleLine = false,
+                        maxLines = 3,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextoBlancoSerio),
                         label = { Text("Contexto breve del percance", style = MaterialTheme.typography.bodySmall, color = PlataAceroSerio) },
-                        placeholder = { Text("Ej. Inundacion en calle, vecino sin app atrapado", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio) },
+                        placeholder = { Text("Ej. Inundacion en calle, vecino sin app atrapado", style = MaterialTheme.typography.bodySmall, color = PlataAceroSerio) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextoBlancoSerio,
+                            unfocusedTextColor = TextoBlancoSerio,
+                            cursorColor = NaranjaFuegoSerio,
+                            focusedContainerColor = FondoOscuroSerio,
+                            unfocusedContainerColor = FondoOscuroSerio,
+                            focusedBorderColor = NaranjaFuegoSerio,
+                            unfocusedBorderColor = PlataAceroSerio.copy(alpha = 0.55f),
+                            focusedLabelColor = NaranjaFuegoSerio,
+                            unfocusedLabelColor = PlataAceroSerio
+                        ),
                         modifier = Modifier.fillMaxWidth()
+                    )
                     )
                 }
             },
