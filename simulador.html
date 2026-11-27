@@ -290,6 +290,412 @@
     </div>
     <a class="nav-btn" href="./index.html">Ver Mapa Principal</a>
   </header>
+<!-- ===== APARTADOS Y ESTADISTICAS ADMINISTRADOR ===== -->
+<style>
+  .admin-subnav {
+    max-width: 1220px;
+    margin: 16px auto 0;
+    padding: 0 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .admin-subnav-btn {
+    background: var(--bg-card, #1A1D22);
+    color: var(--text-main, #F3F4F6);
+    border: 1px solid var(--border, #2F3540);
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .admin-subnav-btn:hover {
+    border-color: var(--accent, #FF4500);
+  }
+  .admin-subnav-btn.active {
+    background: var(--accent, #FF4500);
+    border-color: var(--accent, #FF4500);
+    color: #ffffff;
+  }
+  #secEstadisticasAdmin {
+    max-width: 1220px;
+    margin: 18px auto 40px;
+    padding: 0 16px;
+    display: none;
+  }
+  .stats-card {
+    background: var(--bg-card, #1A1D22);
+    border: 1px solid var(--border, #2F3540);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+    margin-bottom: 18px;
+  }
+  .stats-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin: 14px 0;
+  }
+  .stats-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted, #9CA3AF);
+  }
+  .stats-controls input,
+  .stats-controls select {
+    background: var(--bg-elevated, #23272E);
+    color: var(--text-main, #F3F4F6);
+    border: 1px solid var(--border, #2F3540);
+    border-radius: 10px;
+    padding: 8px 11px;
+    font-size: 13px;
+  }
+  .stats-btn-primary {
+    background: var(--accent, #FF4500);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .stats-btn-secondary {
+    background: var(--bg-elevated, #23272E);
+    color: var(--text-main, #F3F4F6);
+    border: 1px solid var(--border, #2F3540);
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .stats-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .stats-kpi {
+    background: var(--bg-elevated, #23272E);
+    border: 1px solid var(--border, #2F3540);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .stats-kpi .k-lbl {
+    font-size: 12px;
+    color: var(--text-muted, #9CA3AF);
+  }
+  .stats-kpi .k-val {
+    font-size: 19px;
+    font-weight: 800;
+    margin-top: 4px;
+    color: var(--accent-soft, #FF7A3D);
+  }
+  #statsPicoCanvas {
+    width: 100%;
+    height: 230px;
+    background: var(--bg-base, #121417);
+    border: 1px solid var(--border, #2F3540);
+    border-radius: 12px;
+    margin-top: 10px;
+  }
+  .stats-table-wrap {
+    overflow-x: auto;
+    margin-top: 12px;
+  }
+  table.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.stats-table th,
+  table.stats-table td {
+    border-bottom: 1px solid var(--border, #2F3540);
+    padding: 9px 10px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  table.stats-table th {
+    background: var(--bg-elevated, #23272E);
+    color: var(--text-steel, #D1D5DB);
+  }
+</style>
+
+<nav class="admin-subnav" id="adminSubnav">
+  <button type="button" class="admin-subnav-btn active" data-target="panel" onclick="cambiarApartadoAdmin('panel')">
+    Panel Administrador
+  </button>
+  <button type="button" class="admin-subnav-btn" data-target="estadisticas" onclick="cambiarApartadoAdmin('estadisticas')">
+    Estadísticas
+  </button>
+</nav>
+
+<section id="secEstadisticasAdmin">
+  <div class="stats-card">
+    <div class="section-tag">Monitoreo de Tráfico y Picos del Sistema</div>
+    <h2 style="margin:0 0 6px;font-size:18px;">Estadísticas de Alertas por Periodo</h2>
+    <p style="margin:0;font-size:13px;color:var(--text-muted,#9CA3AF);">
+      Analiza lo ocurrido entre dos fechas, detecta la hora con mayor volumen de alertas (riesgo de saturación o caída) y revisa cada alerta emitida.
+    </p>
+
+    <div class="stats-controls">
+      <label>Desde
+        <input type="date" id="filtroFechaDesde">
+      </label>
+      <label>Hasta
+        <input type="date" id="filtroFechaHasta">
+      </label>
+      <label>Tipo de alerta
+        <select id="filtroTipoAlerta">
+          <option value="ALL">Todos</option>
+          <option value="sismo">Sismo</option>
+          <option value="deslizamiento">Deslizamiento</option>
+          <option value="incendio">Incendio</option>
+          <option value="medica">Médica</option>
+          <option value="seguridad">Seguridad</option>
+        </select>
+      </label>
+      <label>Umbral pico / hora
+        <input type="number" id="umbralSaturacion" value="10" min="1" style="width:90px;">
+      </label>
+      <label>Backend URL
+        <input type="text" id="backendUrlStats" value="http://127.0.0.1:8000" style="width:190px;">
+      </label>
+      <button type="button" class="stats-btn-primary" onclick="actualizarPanelEstadisticas()">Actualizar</button>
+      <button type="button" class="stats-btn-secondary" onclick="exportarAlertasCsv()">Exportar CSV</button>
+    </div>
+
+    <div class="stats-kpis">
+      <div class="stats-kpi">
+        <div class="k-lbl">Alertas en el periodo</div>
+        <div class="k-val" id="kpiTotalAlertas">0</div>
+      </div>
+      <div class="stats-kpi">
+        <div class="k-lbl">Pico máximo de tráfico</div>
+        <div class="k-val" id="kpiPicoMaximo">-</div>
+      </div>
+      <div class="stats-kpi">
+        <div class="k-lbl">Riesgo de saturación / caída</div>
+        <div class="k-val" id="kpiRiesgoSistema">BAJO</div>
+      </div>
+      <div class="stats-kpi">
+        <div class="k-lbl">Distrito / Zona con más reportes</div>
+        <div class="k-val" id="kpiZonaCritica">-</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <strong style="font-size:13px;">Plano estadístico de frecuencia horaria (rojo = pico máximo)</strong>
+      <canvas id="statsPicoCanvas" width="1100" height="230"></canvas>
+    </div>
+  </div>
+
+  <div class="stats-card">
+    <div class="section-tag">Detalle Completo por Alerta Emitida</div>
+    <h3 style="margin:0 0 8px;font-size:16px;">Registro de Alertas de Usuarios</h3>
+    <div class="stats-table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Código Alerta</th>
+            <th>Usuario</th>
+            <th>Número / ID</th>
+            <th>Fecha y Hora</th>
+            <th>Ubicación / Coordenadas</th>
+            <th>Tipo / Estado</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTablaEstadisticas">
+          <tr><td colspan="7">Abre "Estadísticas" o pulsa "Actualizar" para cargar las alertas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+let _ultimasAlertasFiltradas = [];
+
+function cambiarApartadoAdmin(apartado) {
+  document.querySelectorAll('#adminSubnav .admin-subnav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === apartado);
+  });
+  const secStats = document.getElementById('secEstadisticasAdmin');
+  if (secStats) {
+    secStats.style.display = (apartado === 'estadisticas') ? 'block' : 'none';
+  }
+  document.querySelectorAll('main').forEach(m => {
+    m.style.display = (apartado === 'estadisticas') ? 'none' : '';
+  });
+  if (apartado === 'estadisticas') {
+    actualizarPanelEstadisticas();
+  }
+}
+
+function pintarPlanoPicos(conteoHoras, umbral) {
+  const canvas = document.getElementById('statsPicoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const etiquetas = Object.keys(conteoHoras).sort();
+  if (!etiquetas.length) {
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillText('No hay datos en el rango seleccionado para trazar el plano estadístico.', 24, 46);
+    return;
+  }
+
+  const valores = etiquetas.map(k => conteoHoras[k]);
+  const maxVal = Math.max(...valores, 1);
+  const padIzq = 44, padDer = 24, padSup = 24, padInf = 36;
+  const areaAncho = w - padIzq - padDer;
+  const areaAlto = h - padSup - padInf;
+  const paso = areaAncho / etiquetas.length;
+  const anchoBarra = Math.max(14, Math.min(54, paso - 10));
+
+  ctx.strokeStyle = '#2F3540';
+  ctx.beginPath();
+  ctx.moveTo(padIzq, padSup);
+  ctx.lineTo(padIzq, h - padInf);
+  ctx.lineTo(w - padDer, h - padInf);
+  ctx.stroke();
+
+  etiquetas.forEach((clave, idx) => {
+    const cant = valores[idx];
+    const altoBarra = (cant / maxVal) * (areaAlto - 12);
+    const x = padIzq + idx * paso + (paso - anchoBarra) / 2;
+    const y = h - padInf - altoBarra;
+    const esPicoCritico = (cant === maxVal && cant >= umbral) || (cant === maxVal && maxVal >= 3);
+
+    ctx.fillStyle = esPicoCritico ? '#EF4444' : '#FF7A3D';
+    ctx.fillRect(x, y, anchoBarra, altoBarra);
+
+    ctx.fillStyle = '#F3F4F6';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillText(String(cant), x + 2, Math.max(14, y - 5));
+
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillText(clave.slice(11, 16) || clave, x, h - 14);
+  });
+}
+
+async function actualizarPanelEstadisticas() {
+  const baseUrl = (document.getElementById('backendUrlStats')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  const desde = document.getElementById('filtroFechaDesde')?.value || '';
+  const hasta = document.getElementById('filtroFechaHasta')?.value || '';
+  const tipo = document.getElementById('filtroTipoAlerta')?.value || 'ALL';
+  const umbral = Math.max(1, Number(document.getElementById('umbralSaturacion')?.value || 10));
+
+  let puntos = [];
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/alertas/mapa-calor`);
+    if (res.ok) {
+      const json = await res.json();
+      puntos = Array.isArray(json.puntos) ? json.puntos : [];
+    }
+  } catch (err) {
+    console.warn('No se pudo consultar el backend:', err);
+  }
+
+  const filtrados = puntos.filter(item => {
+    const ts = String(item.timestamp || '');
+    const dia = ts.slice(0, 10);
+    if (desde && dia && dia < desde) return false;
+    if (hasta && dia && dia > hasta) return false;
+    const cat = String(item.categoria || item.tipo || '').toLowerCase();
+    if (tipo !== 'ALL' && cat !== tipo.toLowerCase()) return false;
+    return true;
+  });
+
+  _ultimasAlertasFiltradas = filtrados;
+
+  const conteoHoras = {};
+  const conteoZonas = {};
+  let horaPico = '-';
+  let maxPorHora = 0;
+
+  filtrados.forEach(item => {
+    const ts = String(item.timestamp || 'Sin fecha');
+    const claveHora = ts.length >= 13 ? `${ts.slice(0, 13)}:00` : ts;
+    conteoHoras[claveHora] = (conteoHoras[claveHora] || 0) + 1;
+    if (conteoHoras[claveHora] > maxPorHora) {
+      maxPorHora = conteoHoras[claveHora];
+      horaPico = claveHora;
+    }
+    const zona = item.distrito || item.zona_cercana || 'Arequipa';
+    conteoZonas[zona] = (conteoZonas[zona] || 0) + 1;
+  });
+
+  const zonaTop = Object.entries(conteoZonas).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+  let estadoRiesgo = 'BAJO';
+  if (maxPorHora >= umbral) estadoRiesgo = 'CRÍTICO (POSIBLE CAÍDA)';
+  else if (maxPorHora >= Math.ceil(umbral * 0.6)) estadoRiesgo = 'MODERADO';
+
+  document.getElementById('kpiTotalAlertas').textContent = String(filtrados.length);
+  document.getElementById('kpiPicoMaximo').textContent = maxPorHora > 0 ? `${horaPico.slice(11, 16)} (${maxPorHora} alt/h)` : '-';
+  document.getElementById('kpiRiesgoSistema').textContent = estadoRiesgo;
+  document.getElementById('kpiZonaCritica').textContent = zonaTop;
+
+  pintarPlanoPicos(conteoHoras, umbral);
+
+  const tbody = document.getElementById('cuerpoTablaEstadisticas');
+  if (!filtrados.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No se encontraron alertas con los filtros seleccionados.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(item => {
+    const codigo = item.alerta_id || '-';
+    const usuario = item.nombre_usuario || 'Vecino Arequipa';
+    const numero = item.telefono || item.numero || item.usuario_id || '-';
+    const fechaHora = item.timestamp || '-';
+    const coords = (item.lat != null && item.lng != null)
+      ? `${Number(item.lat).toFixed(5)}, ${Number(item.lng).toFixed(5)}`
+      : 'Sin coords';
+    const ubicacion = `${item.distrito || 'Arequipa'}${item.sector_referencia ? ' - ' + item.sector_referencia : ''} (${coords})`;
+    const tipoEstado = `${item.categoria || item.tipo || '-'} · ${item.estado || 'ACTIVA'}`;
+    const desc = item.descripcion || '';
+    return `<tr>
+      <td>${codigo}</td>
+      <td>${usuario}</td>
+      <td>${numero}</td>
+      <td>${fechaHora}</td>
+      <td>${ubicacion}</td>
+      <td>${tipoEstado}</td>
+      <td>${desc}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportarAlertasCsv() {
+  if (!_ultimasAlertasFiltradas.length) return;
+  const cols = ['alerta_id', 'nombre_usuario', 'usuario_id', 'telefono', 'timestamp', 'distrito', 'sector_referencia', 'lat', 'lng', 'categoria', 'estado', 'descripcion'];
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [
+    cols.join(','),
+    ..._ultimasAlertasFiltradas.map(r => cols.map(c => esc(r[c])).join(','))
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'estadisticas_alertas_arequipa.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+<!-- ===== FIN APARTADOS Y ESTADISTICAS ADMINISTRADOR ===== -->
 
   <main>
     <section id="cardControl" class="card">

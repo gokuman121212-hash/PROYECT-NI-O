@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -1113,5 +1113,375 @@
   cargarDatosCOE();
   conectarWebSocket();
 </script>
+<!-- ===== APARTADO: VISTA APP USUARIO EN WEB ===== -->
+<style>
+  .coe-app-view-btn {
+    background: #1d4ed8;
+    color: #ffffff;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-left: 6px;
+  }
+  .coe-app-view-btn.active {
+    background: #ea580c;
+    border-color: #fb923c;
+  }
+  #secVistaAppUsuario {
+    display: none;
+    padding: 20px;
+    background: #0b1120;
+    color: #f8fafc;
+    min-height: calc(100vh - 70px);
+  }
+  .phone-stage {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 390px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .phone-stage { grid-template-columns: 1fr; }
+  }
+  .phone-frame {
+    width: 100%;
+    max-width: 390px;
+    margin: 0 auto;
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 34px;
+    border: 8px solid #1e293b;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+  }
+  .phone-topbar {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .phone-body {
+    padding: 16px;
+    min-height: 500px;
+    max-height: 560px;
+    overflow-y: auto;
+    background: #f8fafc;
+  }
+  .app-badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .app-field {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    box-sizing: border-box;
+  }
+  .app-btn-primary {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 10px;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .app-btn-sos {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: #dc2626;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .phone-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+  }
+  .phone-nav button {
+    border: none;
+    background: transparent;
+    padding: 10px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+  }
+  .phone-nav button.active {
+    color: #1d4ed8;
+    background: #eff6ff;
+  }
+  .app-notes-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .app-alert-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #dc2626;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+</style>
+
+<section id="secVistaAppUsuario">
+  <div class="phone-stage">
+    <div>
+      <div class="phone-frame">
+        <div class="phone-topbar">
+          <span>AlertaCayma · App Vecino</span>
+          <span id="appSimStatus">Firebase</span>
+        </div>
+
+        <div class="phone-body" id="appScreenInicio">
+          <span class="app-badge">RED VECINAL AREQUIPA SOS</span>
+          <h3 style="margin:0 0 4px;font-size:18px;">Pantalla del Usuario</h3>
+          <p style="margin:0 0 12px;font-size:12px;color:#475569;">Vista web de cómo ve y usa la aplicación el ciudadano.</p>
+
+          <label style="font-size:11px;font-weight:700;color:#334155;">Nombre y Apellidos</label>
+          <input class="app-field" id="appNombre" value="Cristhian Prueba Cayma" />
+
+          <label style="font-size:11px;font-weight:700;color:#334155;">Número de Celular</label>
+          <input class="app-field" id="appTelefono" value="958123456" />
+
+          <label style="font-size:11px;font-weight:700;color:#334155;">Distrito</label>
+          <select class="app-field" id="appDistrito">
+            <option selected>Cayma</option>
+            <option>Alto Selva Alegre</option>
+            <option>Arequipa</option>
+            <option>Yanahuara</option>
+            <option>Cerro Colorado</option>
+          </select>
+
+          <button type="button" class="app-btn-primary" onclick="guardarPerfilPreview()">Guardar Sesión Preview</button>
+          <div id="appPerfilMsg" style="font-size:11px;color:#15803d;margin-top:8px;font-weight:600;"></div>
+        </div>
+
+        <div class="phone-body" id="appScreenMapa" style="display:none;">
+          <span class="app-badge">EMERGENCIA EN TIEMPO REAL</span>
+          <h3 style="margin:0 0 6px;font-size:17px;">Emitir Alerta SOS</h3>
+
+          <label style="font-size:11px;font-weight:700;color:#334155;">Tipo de Emergencia</label>
+          <select class="app-field" id="appTipoEmergencia">
+            <option value="sismo">Sismo</option>
+            <option value="deslizamiento">Deslizamiento / Huaico</option>
+            <option value="incendio">Incendio</option>
+            <option value="medica">Emergencia Médica</option>
+            <option value="seguridad">Seguridad</option>
+          </select>
+
+          <label style="font-size:11px;font-weight:700;color:#334155;">Descripción del evento</label>
+          <input class="app-field" id="appDescripcion" placeholder="Ej. Deslizamiento en torrentera cerca de Cayma" />
+
+          <button type="button" class="app-btn-sos" onclick="enviarAlertaDesdePreview()">ENVIAR ALERTA SOS</button>
+          <div id="appSosResultado" style="font-size:11px;margin-top:8px;color:#0f172a;"></div>
+
+          <h4 style="margin:14px 0 6px;font-size:13px;">Alertas Recientes</h4>
+          <div id="appListaAlertasPreview"></div>
+        </div>
+
+        <div class="phone-body" id="appScreenChat" style="display:none;">
+          <span class="app-badge">CHAT VECINAL</span>
+          <h3 style="margin:0 0 6px;font-size:17px;">Coordinación en Zona</h3>
+          <div id="appChatMensajes" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;min-height:180px;margin-bottom:10px;font-size:12px;">
+            <div style="color:#64748b;">Sin mensajes cargados aún.</div>
+          </div>
+          <input class="app-field" id="appChatInput" placeholder="Escribe un mensaje vecinal..." />
+          <button type="button" class="app-btn-primary" onclick="enviarMensajePreview()">Enviar Mensaje</button>
+        </div>
+
+        <div class="phone-nav">
+          <button type="button" class="active" data-screen="inicio" onclick="cambiarPantallaAppPreview('inicio')">Inicio</button>
+          <button type="button" data-screen="mapa" onclick="cambiarPantallaAppPreview('mapa')">Mapa / SOS</button>
+          <button type="button" data-screen="chat" onclick="cambiarPantallaAppPreview('chat')">Chat</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-notes-card">
+      <h3 style="margin:0 0 8px;font-size:17px;">Control de Vista del Usuario para el Administrador</h3>
+      <p style="margin:0 0 12px;font-size:13px;color:#94a3b8;">
+        Usa este apartado cuando quieras revisar cómo luce la experiencia del vecino o probar un reporte SOS conectado a tu API.
+      </p>
+      <label style="display:block;font-size:12px;color:#cbd5e1;margin-bottom:4px;">URL del Backend FastAPI</label>
+      <input class="app-field" id="appPreviewApiUrl" value="http://127.0.0.1:8000" style="background:#1e293b;color:#f8fafc;border-color:#334155;" />
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="stats-btn-primary" onclick="cargarAlertasAppPreview()">Sincronizar Alertas</button>
+        <button type="button" class="stats-btn-secondary" onclick="alternarModoAdminCoe(false)">Volver al Panel COE</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+let _mensajesPreview = [
+  { autor: 'COE Cayma', texto: 'Canal vecinal activo para reportes en Arequipa.' }
+];
+
+function alternarModoAdminCoe(mostrarApp) {
+  const appSec = document.getElementById('secVistaAppUsuario');
+  if (appSec) appSec.style.display = mostrarApp ? 'block' : 'none';
+
+  document.querySelectorAll('main, .main-content, .dashboard-container, .container, #secEstadisticasAdmin').forEach(el => {
+    if (el && el.id !== 'secVistaAppUsuario') {
+      el.style.display = mostrarApp ? 'none' : '';
+    }
+  });
+
+  document.querySelectorAll('.coe-app-view-btn').forEach(b => b.classList.toggle('active', mostrarApp));
+  if (mostrarApp) cargarAlertasAppPreview();
+}
+
+function cambiarPantallaAppPreview(pantalla) {
+  ['inicio', 'mapa', 'chat'].forEach(p => {
+    const el = document.getElementById('appScreen' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.style.display = (p === pantalla) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.phone-nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === pantalla);
+  });
+  if (pantalla === 'mapa') cargarAlertasAppPreview();
+  if (pantalla === 'chat') renderizarChatPreview();
+}
+
+function guardarPerfilPreview() {
+  const nombre = document.getElementById('appNombre')?.value || 'Vecino';
+  const tel = document.getElementById('appTelefono')?.value || '';
+  const dist = document.getElementById('appDistrito')?.value || 'Cayma';
+  const msg = document.getElementById('appPerfilMsg');
+  if (msg) msg.textContent = `Perfil listo en vista previa: ${nombre} (${tel}) · ${dist}`;
+}
+
+async function cargarAlertasAppPreview() {
+  const base = (document.getElementById('appPreviewApiUrl')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  const cont = document.getElementById('appListaAlertasPreview');
+  if (!cont) return;
+  try {
+    const r = await fetch(`${base}/api/v1/alertas/mapa-calor`);
+    if (r.ok) {
+      const data = await r.json();
+      const pts = Array.isArray(data.puntos) ? data.puntos.slice(0, 6) : [];
+      if (!pts.length) {
+        cont.innerHTML = '<div style="font-size:12px;color:#64748b;">No hay alertas activas reportadas.</div>';
+        return;
+      }
+      cont.innerHTML = pts.map(p => `
+        <div class="app-alert-item">
+          <strong>${p.categoria || p.tipo || 'Alerta'}</strong> · ${p.distrito || 'Arequipa'}<br/>
+          <span>${p.descripcion || ''}</span>
+        </div>
+      `).join('');
+      return;
+    }
+  } catch (e) {}
+  cont.innerHTML = '<div style="font-size:12px;color:#64748b;">Backend no disponible en este momento (vista local lista).</div>';
+}
+
+async function enviarAlertaDesdePreview() {
+  const base = (document.getElementById('appPreviewApiUrl')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  const nombre = document.getElementById('appNombre')?.value || 'Vecino Arequipa';
+  const distrito = document.getElementById('appDistrito')?.value || 'Cayma';
+  const tipo = document.getElementById('appTipoEmergencia')?.value || 'sismo';
+  const descripcion = document.getElementById('appDescripcion')?.value || 'Alerta emitida desde vista previa web del usuario';
+  const out = document.getElementById('appSosResultado');
+
+  const payload = {
+    usuario_id: 'preview_web_user',
+    nombre_usuario: nombre,
+    distrito: distrito,
+    sector_referencia: distrito,
+    latitud: -16.3515,
+    longitud: -71.5499,
+    tipo: tipo,
+    descripcion: descripcion,
+    nivel_bateria: 95,
+    origen_offline_mesh: false
+  };
+
+  try {
+    const r = await fetch(`${base}/api/v1/alertas/sos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const body = await r.json();
+    if (r.ok) {
+      if (out) out.textContent = `Alerta enviada (${body.alerta_id || 'OK'})`;
+      cargarAlertasAppPreview();
+    } else {
+      if (out) out.textContent = `Respuesta ${r.status}: ${body.detail || 'Revisar datos'}`;
+    }
+  } catch (e) {
+    if (out) out.textContent = 'Sin conexión al backend local; prueba levantando uvicorn o revisa la URL.';
+  }
+}
+
+function renderizarChatPreview() {
+  const box = document.getElementById('appChatMensajes');
+  if (!box) return;
+  box.innerHTML = _mensajesPreview.map(m =>
+    `<div style="margin-bottom:6px;"><strong>${m.autor}:</strong> ${m.texto}</div>`
+  ).join('');
+}
+
+function enviarMensajePreview() {
+  const input = document.getElementById('appChatInput');
+  const autor = document.getElementById('appNombre')?.value || 'Vecino';
+  const txt = (input?.value || '').trim();
+  if (!txt) return;
+  _mensajesPreview.push({ autor, texto: txt });
+  input.value = '';
+  renderizarChatPreview();
+}
+
+(function insertarBotonVistaApp() {
+  const header = document.querySelector('header');
+  if (header && !document.querySelector('.coe-app-view-btn')) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'coe-app-view-btn';
+    btn.textContent = 'Vista App Usuario';
+    btn.onclick = function() {
+      const sec = document.getElementById('secVistaAppUsuario');
+      const estaVisible = sec && sec.style.display === 'block';
+      alternarModoAdminCoe(!estaVisible);
+    };
+    header.appendChild(btn);
+  }
+})();
+</script>
+<!-- ===== FIN APARTADO: VISTA APP USUARIO EN WEB ===== -->
 </body>
 </html>
