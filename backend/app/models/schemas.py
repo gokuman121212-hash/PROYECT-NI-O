@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -51,6 +51,7 @@ class AlertaCreate(BaseModel):
     nivel_bateria: int = Field(..., ge=0, le=100)
     origen_offline_mesh: bool = False
     riesgo_sensor_verificado: bool = True
+    es_simulacion: bool = False
 
 class AlertaResponse(AlertaCreate):
     alerta_id: str

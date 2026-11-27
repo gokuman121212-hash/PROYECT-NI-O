@@ -438,7 +438,11 @@
   <button type="button" class="admin-subnav-btn" data-target="alertas" onclick="cambiarApartadoAdmin('alertas')">
     Alertas (<span id="badgeAlertasActivasAdmin">0</span>)
   </button>
+  <button type="button" class="admin-subnav-btn" data-target="simulador_stats" onclick="cambiarApartadoAdmin('simulador_stats')">
+    Estadísticas del Simulador
+  </button>
 </nav>
+
 
 
 <section id="secAlertasAdmin" style="max-width:1220px;margin:18px auto 40px;padding:0 16px;display:none;">
@@ -463,6 +467,99 @@
     <div id="listaAlertasActivasAdmin" style="display:grid;gap:10px;">
       <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">
         Abre la pestaña "Alertas" o pulsa "Refrescar Alertas" para cargar las alertas activas.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="secSimuladorStatsAdmin" style="max-width:1220px;margin:18px auto 40px;padding:0 16px;display:none;">
+  <div class="stats-card">
+    <div class="section-tag">Modo Exposición y Pruebas Controladas</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:18px;">Estadísticas del Simulador</h2>
+        <p style="margin:0;font-size:13px;color:var(--text-muted,#9CA3AF);">
+          Registra y grafica alertas simuladas guardadas en base de datos sin mezclarlas con reportes ciudadanos reales. Tú decides cuándo iniciar y cuándo detener.
+        </p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input id="simStatsBackendUrl" type="text" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000"
+               style="padding:8px 10px;border-radius:8px;border:1px solid var(--border,#2F3540);background:#121417;color:#F9FAFB;font-size:12px;min-width:190px;" />
+        <button type="button" id="btnIniciarSimStats" class="stats-btn-primary" onclick="iniciarRegistroSimuladorStats()">
+          Iniciar Registro
+        </button>
+        <button type="button" id="btnDetenerSimStats" class="stats-btn-secondary" onclick="detenerRegistroSimuladorStats()" disabled>
+          Detener Registro
+        </button>
+        <button type="button" class="stats-btn-secondary" onclick="emitirAlertaSimuladaEnBD()">
+          Simular y Guardar en BD
+        </button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px;padding:12px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+      <div>
+        <label style="display:block;font-size:11px;color:#9CA3AF;margin-bottom:4px;">Tipo de Alerta Simulada</label>
+        <select id="simStatsTipo" style="width:100%;padding:8px;border-radius:8px;background:#1A1D22;color:#F9FAFB;border:1px solid #2F3540;font-size:12px;">
+          <option value="deslizamiento">Deslizamiento / Huaico</option>
+          <option value="sismo">Sismo</option>
+          <option value="incendio">Incendio</option>
+          <option value="inundacion">Inundación</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:#9CA3AF;margin-bottom:4px;">Distrito / Sector</label>
+        <input id="simStatsDistrito" type="text" value="Cayma — Torrentera Chullo"
+               style="width:100%;padding:8px;border-radius:8px;background:#1A1D22;color:#F9FAFB;border:1px solid #2F3540;font-size:12px;" />
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:#9CA3AF;margin-bottom:4px;">Intervalo Automático (seg)</label>
+        <input id="simStatsIntervalo" type="number" min="2" max="60" value="5"
+               style="width:100%;padding:8px;border-radius:8px;background:#1A1D22;color:#F9FAFB;border:1px solid #2F3540;font-size:12px;" />
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:#9CA3AF;margin-bottom:4px;">Estado del Registro</label>
+        <div id="simStatsEstadoBadge" style="padding:8px 10px;border-radius:8px;background:rgba(156,163,175,0.14);color:#D1D5DB;font-weight:700;font-size:12px;">
+          DETENIDO (Manual)
+        </div>
+      </div>
+    </div>
+
+    <div id="simStatsMensaje" style="font-size:12px;color:#9CA3AF;margin-bottom:14px;">
+      Listo para iniciar cuando tú lo indiques.
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:14px;color:#F9FAFB;">Estadística del Día</strong>
+          <span id="simCountDia" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+        </div>
+        <div id="simPlanoDia"></div>
+      </div>
+
+      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:14px;color:#F9FAFB;">Estadística de la Semana</strong>
+          <span id="simCountSemana" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+        </div>
+        <div id="simPlanoSemana"></div>
+      </div>
+
+      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:14px;color:#F9FAFB;">Estadística del Mes</strong>
+          <span id="simCountMes" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+        </div>
+        <div id="simPlanoMes"></div>
+      </div>
+
+      <div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:14px;color:#F9FAFB;">Estadística Anual</strong>
+          <span id="simCountAnual" style="font-size:12px;font-weight:700;color:#F97316;">0</span>
+        </div>
+        <div id="simPlanoAnual"></div>
       </div>
     </div>
   </div>
@@ -1177,6 +1274,300 @@ async function simularAlertaAdmin() {
       window.cargarAlertasActivasAdmin();
     }
   };
+})();
+</script>
+<script>
+(function initSimuladorEstadisticas() {
+  const STORAGE_KEY = 'alertacayma_simulador_alertas_v1';
+  let timerRegistroSim = null;
+
+  function leerSimuladasLocales() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function guardarSimuladasLocales(lista) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+    } catch (_) {}
+  }
+
+  function obtenerBaseUrlSim() {
+    const el = document.getElementById('simStatsBackendUrl');
+    const val = el && el.value.trim() ? el.value.trim() : 'http://127.0.0.1:8000';
+    return val.replace(/\/+$/, '');
+  }
+
+  function renderPlanoSvg(etiquetas, valores, colorHex) {
+    const maxVal = Math.max(1, ...valores);
+    const w = 260;
+    const h = 130;
+    const padX = 14;
+    const padTop = 12;
+    const padBot = 24;
+    const plotH = h - padTop - padBot;
+    const n = Math.max(1, valores.length);
+    const stepX = (w - padX * 2) / Math.max(1, n - 1);
+
+    const pts = valores.map((v, idx) => {
+      const x = n === 1 ? w / 2 : padX + idx * stepX;
+      const y = padTop + plotH - (v / maxVal) * plotH;
+      return { x, y, v, lbl: etiquetas[idx] || '' };
+    });
+
+    const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const areaPts = pts.length
+      ? `${pts[0].x.toFixed(1)},${(padTop + plotH).toFixed(1)} ` + polyline + ` ${pts[pts.length - 1].x.toFixed(1)},${(padTop + plotH).toFixed(1)}`
+      : '';
+
+    const circles = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${colorHex}" />`).join('');
+    const labels = pts.filter((_, i) => i === 0 || i === pts.length - 1 || i === Math.floor(pts.length / 2)).map(p =>
+      `<text x="${p.x.toFixed(1)}" y="${h - 6}" fill="#9CA3AF" font-size="9" text-anchor="middle">${p.lbl}</text>`
+    ).join('');
+
+    return `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="130" style="display:block;background:#0E1013;border-radius:8px;border:1px solid #232832;">
+        <line x1="${padX}" y1="${padTop + plotH}" x2="${w - padX}" y2="${padTop + plotH}" stroke="#2F3540" stroke-width="1" />
+        ${areaPts ? `<polygon points="${areaPts}" fill="${colorHex}" fill-opacity="0.16" />` : ''}
+        ${pts.length > 1 ? `<polyline fill="none" stroke="${colorHex}" stroke-width="2.2" points="${polyline}" />` : ''}
+        ${circles}
+        ${labels}
+      </svg>
+    `;
+  }
+
+  window.renderizarPlanosSimulador = function() {
+    const eventos = leerSimuladasLocales();
+    const ahora = new Date();
+    const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    const inicioSemana = new Date(inicioDia);
+    inicioSemana.setDate(inicioDia.getDate() - 6);
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+
+    // 1. Plano del día (franjas de 4h)
+    const franjasDia = ['00h', '04h', '08h', '12h', '16h', '20h'];
+    const valsDia = [0, 0, 0, 0, 0, 0];
+    let totalDia = 0;
+
+    // 2. Plano de la semana (últimos 7 días)
+    const diasSemana = [];
+    const valsSemana = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(inicioDia);
+      d.setDate(inicioDia.getDate() - i);
+      diasSemana.push(`${d.getDate()}/${d.getMonth() + 1}`);
+      valsSemana.push(0);
+    }
+    let totalSemana = 0;
+
+    // 3. Plano del mes (semanas del mes actual)
+    const semanasMes = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+    const valsMes = [0, 0, 0, 0];
+    let totalMes = 0;
+
+    // 4. Plano anual (12 meses)
+    const mesesAnio = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const valsAnual = Array(12).fill(0);
+    let totalAnual = 0;
+
+    eventos.forEach(ev => {
+      const ts = new Date(ev.timestamp || Date.now());
+      if (isNaN(ts.getTime())) return;
+
+      if (ts >= inicioDia) {
+        totalDia++;
+        const idxFranja = Math.min(5, Math.floor(ts.getHours() / 4));
+        valsDia[idxFranja]++;
+      }
+      if (ts >= inicioSemana) {
+        totalSemana++;
+        const diffDias = Math.floor((new Date(ts.getFullYear(), ts.getMonth(), ts.getDate()) - inicioSemana) / 86400000);
+        if (diffDias >= 0 && diffDias < 7) valsSemana[diffDias]++;
+      }
+      if (ts >= inicioMes && ts.getFullYear() === ahora.getFullYear() && ts.getMonth() === ahora.getMonth()) {
+        totalMes++;
+        const semIdx = Math.min(3, Math.floor((ts.getDate() - 1) / 7));
+        valsMes[semIdx]++;
+      }
+      if (ts >= inicioAnio && ts.getFullYear() === ahora.getFullYear()) {
+        totalAnual++;
+        valsAnual[ts.getMonth()]++;
+      }
+    });
+
+    const cDia = document.getElementById('simCountDia');
+    const cSem = document.getElementById('simCountSemana');
+    const cMes = document.getElementById('simCountMes');
+    const cAnio = document.getElementById('simCountAnual');
+    if (cDia) cDia.textContent = String(totalDia);
+    if (cSem) cSem.textContent = String(totalSemana);
+    if (cMes) cMes.textContent = String(totalMes);
+    if (cAnio) cAnio.textContent = String(totalAnual);
+
+    const pDia = document.getElementById('simPlanoDia');
+    const pSem = document.getElementById('simPlanoSemana');
+    const pMes = document.getElementById('simPlanoMes');
+    const pAnio = document.getElementById('simPlanoAnual');
+    if (pDia) pDia.innerHTML = renderPlanoSvg(franjasDia, valsDia, '#F97316');
+    if (pSem) pSem.innerHTML = renderPlanoSvg(diasSemana, valsSemana, '#38BDF8');
+    if (pMes) pMes.innerHTML = renderPlanoSvg(semanasMes, valsMes, '#A78BFA');
+    if (pAnio) pAnio.innerHTML = renderPlanoSvg(mesesAnio, valsAnual, '#34D399');
+  };
+
+  window.emitirAlertaSimuladaEnBD = async function() {
+    const tipo = (document.getElementById('simStatsTipo')?.value || 'deslizamiento');
+    const distritoRaw = (document.getElementById('simStatsDistrito')?.value || 'Cayma').trim();
+    const partes = distritoRaw.split('—');
+    const distrito = (partes[0] || 'Cayma').trim();
+    const sector = (partes[1] || distritoRaw).trim();
+    const baseUrl = obtenerBaseUrlSim();
+    const msg = document.getElementById('simStatsMensaje');
+
+    const payload = {
+      usuario_id: 'sim_admin_demo',
+      nombre_usuario: 'Simulación Admin (Expo)',
+      distrito: distrito,
+      sector_referencia: sector,
+      latitud: -16.3820 + ((Math.random() - 0.5) * 0.015),
+      longitud: -71.5450 + ((Math.random() - 0.5) * 0.015),
+      tipo: tipo,
+      descripcion: `[SIMULACION EXPO] Evento simulado de ${tipo} en ${distritoRaw}`,
+      nivel_bateria: 100,
+      origen_offline_mesh: false,
+      es_simulacion: true
+    };
+
+    const ahoraIso = new Date().toISOString();
+    let guardadoBackend = false;
+    let alertaId = `sim_${Date.now()}`;
+
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/alertas/sos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alertaId = data.alerta_id || alertaId;
+        guardadoBackend = true;
+      }
+    } catch (_) {}
+
+    const lista = leerSimuladasLocales();
+    lista.push({
+      alerta_id: alertaId,
+      tipo: tipo,
+      distrito: distritoRaw,
+      timestamp: ahoraIso,
+      es_simulacion: true
+    });
+    guardarSimuladasLocales(lista);
+    window.renderizarPlanosSimulador();
+
+    if (msg) {
+      msg.textContent = guardadoBackend
+        ? `Alerta simulada (${alertaId}) guardada en BD y graficada (${new Date().toLocaleTimeString()}).`
+        : `Alerta simulada (${alertaId}) graficada localmente (backend no disponible en ${baseUrl}, reintenta cuando levantes uvicorn).`;
+    }
+  };
+
+  window.iniciarRegistroSimuladorStats = function() {
+    if (timerRegistroSim) return;
+    const segInput = Number(document.getElementById('simStatsIntervalo')?.value || 5);
+    const ms = Math.max(2000, Math.min(60000, segInput * 1000));
+    const badge = document.getElementById('simStatsEstadoBadge');
+    const btnIni = document.getElementById('btnIniciarSimStats');
+    const btnDet = document.getElementById('btnDetenerSimStats');
+
+    if (badge) {
+      badge.textContent = `ACTIVO (cada ${Math.round(ms / 1000)}s)`;
+      badge.style.background = 'rgba(34,197,94,0.18)';
+      badge.style.color = '#4ADE80';
+    }
+    if (btnIni) btnIni.disabled = true;
+    if (btnDet) btnDet.disabled = false;
+
+    window.emitirAlertaSimuladaEnBD();
+    timerRegistroSim = setInterval(() => {
+      window.emitirAlertaSimuladaEnBD();
+    }, ms);
+  };
+
+  window.detenerRegistroSimuladorStats = function() {
+    if (timerRegistroSim) {
+      clearInterval(timerRegistroSim);
+      timerRegistroSim = null;
+    }
+    const badge = document.getElementById('simStatsEstadoBadge');
+    const btnIni = document.getElementById('btnIniciarSimStats');
+    const btnDet = document.getElementById('btnDetenerSimStats');
+    const msg = document.getElementById('simStatsMensaje');
+
+    if (badge) {
+      badge.textContent = 'DETENIDO (Manual)';
+      badge.style.background = 'rgba(156,163,175,0.14)';
+      badge.style.color = '#D1D5DB';
+    }
+    if (btnIni) btnIni.disabled = false;
+    if (btnDet) btnDet.disabled = true;
+    if (msg) msg.textContent = 'Registro continuo detenido manualmente.';
+  };
+
+  const prevCambiar = window.cambiarApartadoAdmin;
+  window.cambiarApartadoAdmin = function(apartado) {
+    if (typeof prevCambiar === 'function') {
+      prevCambiar(apartado);
+    }
+    document.querySelectorAll('#adminSubnav .admin-subnav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.target === apartado);
+    });
+    const secSim = document.getElementById('secSimuladorStatsAdmin');
+    const secAlertas = document.getElementById('secAlertasAdmin');
+    const secStats = document.getElementById('secEstadisticasAdmin');
+    if (secSim) secSim.style.display = (apartado === 'simulador_stats') ? 'block' : 'none';
+    if (apartado === 'simulador_stats') {
+      if (secAlertas) secAlertas.style.display = 'none';
+      if (secStats) secStats.style.display = 'none';
+      document.querySelectorAll('main').forEach(m => { m.style.display = 'none'; });
+      window.renderizarPlanosSimulador();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    window.renderizarPlanosSimulador();
+  });
+})();
+</script>
+<script>
+(function syncSimuladorAlertaVisibilidad() {
+  function actualizarVisibilidad(apartado) {
+    const secSimAlerta = document.getElementById('secSimuladorAlertaAdmin');
+    if (secSimAlerta) {
+      secSimAlerta.style.display = (apartado === 'panel') ? 'block' : 'none';
+    }
+  }
+
+  const prevFn = window.cambiarApartadoAdmin;
+  if (typeof prevFn === 'function' && !prevFn._simAlertaWrapped) {
+    const wrapped = function(apartado) {
+      prevFn(apartado);
+      actualizarVisibilidad(apartado);
+    };
+    wrapped._simAlertaWrapped = true;
+    window.cambiarApartadoAdmin = wrapped;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const activo = document.querySelector('#adminSubnav .admin-subnav-btn.active')?.dataset?.target || 'panel';
+    actualizarVisibilidad(activo);
+  });
 })();
 </script>
 </body>
