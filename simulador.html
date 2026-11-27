@@ -288,7 +288,7 @@
         <small>Control centralizado de registro automatico de catastrofes y riesgos</small>
       </div>
     </div>
-    <a class="nav-btn" href="./index.html">Ver Mapa Principal</a>
+    
   </header>
 <!-- ===== APARTADOS Y ESTADISTICAS ADMINISTRADOR ===== -->
 <style>
@@ -959,5 +959,87 @@ function exportarAlertasCsv() {
       });
     })();
   </script>
+<!-- ===== SIMULADOR DE ALERTA EN PANEL ADMINISTRADOR ===== -->
+<section id="secSimuladorAlertaAdmin" style="max-width:1220px;margin:16px auto 0;padding:0 16px;">
+  <div style="background:var(--bg-card,#1A1D22);border:1px solid var(--border,#2F3540);border-radius:16px;padding:18px;box-shadow:0 10px 26px rgba(0,0,0,0.35);">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent-soft,#FF7A3D);margin-bottom:6px;">
+      Simulador de Alerta Ciudadana (Sin Duplicados por Fecha)
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-muted,#9CA3AF);">
+        Tipo de alerta
+        <select id="simAlertaTipo" style="background:var(--bg-elevated,#23272E);color:var(--text-main,#F3F4F6);border:1px solid var(--border,#2F3540);border-radius:10px;padding:8px 11px;">
+          <option value="sismo">Sismo</option>
+          <option value="deslizamiento">Deslizamiento / Huaico</option>
+          <option value="incendio">Incendio</option>
+          <option value="medica">Emergencia Médica</option>
+          <option value="seguridad">Seguridad</option>
+        </select>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-muted,#9CA3AF);">
+        Distrito
+        <select id="simAlertaDistrito" style="background:var(--bg-elevated,#23272E);color:var(--text-main,#F3F4F6);border:1px solid var(--border,#2F3540);border-radius:10px;padding:8px 11px;">
+          <option value="Cayma">Cayma</option>
+          <option value="Alto Selva Alegre">Alto Selva Alegre</option>
+          <option value="Arequipa">Arequipa (Cercado)</option>
+          <option value="Yanahuara">Yanahuara</option>
+          <option value="Cerro Colorado">Cerro Colorado</option>
+        </select>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-muted,#9CA3AF);flex:1;min-width:220px;">
+        Descripción simulada
+        <input id="simAlertaDesc" type="text" value="Simulación de sismo moderado percibido en Arequipa" style="background:var(--bg-elevated,#23272E);color:var(--text-main,#F3F4F6);border:1px solid var(--border,#2F3540);border-radius:10px;padding:8px 11px;width:100%;" />
+      </label>
+      <button type="button" onclick="simularAlertaAdmin()" style="background:var(--accent,#FF4500);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer;">
+        Simular Alerta
+      </button>
+    </div>
+    <div id="simAlertaEstado" style="margin-top:10px;font-size:12px;color:var(--text-steel,#D1D5DB);">Listo para simular.</div>
+  </div>
+</section>
+
+<script>
+async function simularAlertaAdmin() {
+  const tipo = document.getElementById('simAlertaTipo')?.value || 'sismo';
+  const distrito = document.getElementById('simAlertaDistrito')?.value || 'Cayma';
+  const descripcion = document.getElementById('simAlertaDesc')?.value || 'Simulación de alerta en Arequipa';
+  const estadoEl = document.getElementById('simAlertaEstado');
+  const baseUrl = (document.getElementById('backendUrlStats')?.value || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+
+  const payload = {
+    usuario_id: 'sim_admin_958123456',
+    nombre_usuario: 'Simulador Admin Arequipa',
+    distrito: distrito,
+    sector_referencia: distrito,
+    latitud: -16.3515,
+    longitud: -71.5499,
+    tipo: tipo,
+    descripcion: descripcion,
+    nivel_bateria: 100,
+    origen_offline_mesh: false
+  };
+
+  try {
+    const resp = await fetch(`${baseUrl}/api/v1/alertas/sos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      const msg = data.duplicado_evitado
+        ? `Ya existía un evento de tipo "${tipo}" hoy (${data.alerta_id}): no se duplicó.`
+        : `Alerta simulada registrada: ${data.alerta_id} (${tipo} - ${distrito}).`;
+      if (estadoEl) estadoEl.textContent = msg;
+      if (typeof actualizarPanelEstadisticas === 'function') actualizarPanelEstadisticas();
+    } else {
+      if (estadoEl) estadoEl.textContent = `Error ${resp.status}: ${data.detail || 'No se pudo simular'}`;
+    }
+  } catch (e) {
+    if (estadoEl) estadoEl.textContent = 'Backend no disponible en 127.0.0.1:8000 (levanta uvicorn para guardar en Firestore).';
+  }
+}
+</script>
+<!-- ===== FIN SIMULADOR DE ALERTA EN PANEL ADMINISTRADOR ===== -->
 </body>
 </html>
