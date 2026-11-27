@@ -397,23 +397,7 @@ fun PantallaPrincipalArequipa(
     var ultimoRiesgoSensorRegistrado by remember { mutableStateOf(false) }
 
     var alertasActivas by remember {
-        mutableStateOf(
-            listOf(
-                PuntoAlertaMapa(
-                    alerta_id = "alerta_demo_1",
-                    usuario_id = "vecino_asa_01",
-                    nombre_usuario = "Carlos Mamani",
-                    distrito = "Alto Selva Alegre",
-                    sector_referencia = "Parte Alta Av. Obrera, cerca a torrentera",
-                    lat = -16.3745,
-                    lng = -71.5220,
-                    intensidad = 0.90,
-                    categoria = "deslizamiento",
-                    descripcion = "Agua y lodo bajando por pasaje, vecino adulto mayor necesita apoyo para salir.",
-                    voluntarios_count = 1
-                )
-            )
-        )
+        mutableStateOf<List<PuntoAlertaMapa>>(emptyList())
     }
 
     var alertaEnApoyo by remember { mutableStateOf<PuntoAlertaMapa?>(null) }
@@ -427,6 +411,15 @@ fun PantallaPrincipalArequipa(
     var vecinosMeshCount by remember { mutableIntStateOf(0) }
     var bannerAviso by remember { mutableStateOf<String?>(null) }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+    var ondaLat by remember { mutableStateOf<Double?>(null) }
+    var ondaLng by remember { mutableStateOf<Double?>(null) }
+    var ondaRadioMetros by remember { mutableDoubleStateOf(3000.0) }
+    var ondaEtiqueta by remember { mutableStateOf("Epicentro Arequipa") }
+    var historialRiesgosAbierto by remember { mutableStateOf(false) }
+    var consultaIaTexto by remember { mutableStateOf("") }
+    var respuestaIaTitulo by remember { mutableStateOf("ASISTENTE OFFLINE AREQUIPA") }
+    var respuestaIaCuerpo by remember { mutableStateOf("Selecciona un escenario rápido o escribe tu consulta sobre sismos, torrenteras, incendios o red mesh.") }
+    var respuestaIaMotor by remember { mutableStateOf("IA-Edge-Offline") }
 
     val miLatActual = if (ArequipaGeoData.estaEnArequipaMetropolitana(locationManager.ultimaLatitud, locationManager.ultimaLongitud) && locationManager.ultimaLatitud != 0.0) {
         locationManager.ultimaLatitud
@@ -563,9 +556,7 @@ fun PantallaPrincipalArequipa(
         var actualizadoRemoto = false
         try {
             val mapaResp = apiService.obtenerMapaCalor()
-            if (mapaResp.puntos.isNotEmpty()) {
-                alertasActivas = mapaResp.puntos
-            }
+            alertasActivas = mapaResp.puntos.distinctBy { it.alerta_id }
             mapaResp.clima_y_torrenteras?.let { clima ->
                 if (clima.riesgo_activo_detectado) {
                     sensoresManager.actualizarRiesgoClimaticoDesdeRed(
@@ -593,8 +584,10 @@ fun PantallaPrincipalArequipa(
     LaunchedEffect(Unit) {
         launcherPermisos.launch(permisos)
         while (true) {
-            sincronizarConServidor()
-            delay(8000)
+            if (!sincronizando) {
+                sincronizarConServidor(mostrarMensajeManual = false)
+            }
+            delay(10_000)
         }
     }
 
@@ -769,6 +762,17 @@ fun PantallaPrincipalArequipa(
                             onClick = {
                                 pestanaAnterior = pestanaActiva
                                 pestanaActiva = 2
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ItemApartadoAnimado(
+                            titulo = "IA",
+                            icono = Icons.Default.Star,
+                            seleccionado = pestanaActiva == 3,
+                            acentoColor = Color(0xFF54ACBF),
+                            onClick = {
+                                pestanaAnterior = pestanaActiva
+                                pestanaActiva = 3
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -955,7 +959,25 @@ fun PantallaPrincipalArequipa(
                                 mapView.overlays.add(auraGps)
                                 mapView.overlays.add(puntoGps)
 
-                                mapView.invalidate()
+                                if (ondaLat != null && ondaLng != null) {
+                    val cLat = ondaLat!!
+                    val cLng = ondaLng!!
+                    val latDelta = (ondaRadioMetros / 111320.0)
+                    val lngDelta = (ondaRadioMetros / (111320.0 * kotlin.math.cos(Math.toRadians(cLat))))
+                    val ptsOnda = (0..36).map { idx ->
+                        val ang = (idx * 10.0) * Math.PI / 180.0
+                        GeoPoint(cLat + latDelta * kotlin.math.sin(ang), cLng + lngDelta * kotlin.math.cos(ang))
+                    }
+                    val poligonoOnda = Polygon(mapView).apply {
+                        points = ptsOnda
+                        fillColor = android.graphics.Color.argb(46, 84, 172, 191)
+                        strokeColor = android.graphics.Color.rgb(167, 235, 242)
+                        strokeWidth = 4f
+                        title = "$ondaEtiqueta (${String.format("%.1f", ondaRadioMetros / 1000.0)} km)"
+                    }
+                    mapView.overlays.add(poligonoOnda)
+                }
+                mapView.invalidate()
                             },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -1461,6 +1483,144 @@ fun PantallaPrincipalArequipa(
                     }
                 }
 
+                3 -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .background(FondoCarbonSerio),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                border = BorderStroke(1.dp, Color(0xFF54ACBF).copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(
+                                        "SOE · IA TÁCTICA AREQUIPA",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color(0xFF54ACBF)
+                                    )
+                                    Text(
+                                        "SOE · Asistente de Riesgos y Protocolos",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = Color(0xFFA7EBF2)
+                                    )
+                                    Text(
+                                        "Alertas activas: ${alertasActivas.size} - Distrito: ${perfil.distrito} - Motor: $respuestaIaMotor",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextoGrisSerio
+                                    )
+
+                                    fun ejecutarConsultaIa(prompt: String, tipoSugerido: String) {
+                                        val textoEval = prompt.ifBlank { "protocolo preventivo en arequipa" }
+                                        val res = aiEngine.clasificarReporteSinInternet(textoEval, tipoSugerido)
+                                        respuestaIaMotor = res.motorUsado
+                                        val lower = textoEval.lowercase()
+                                        when {
+                                            res.tipoClasificado == "sismo" || lower.contains("sismo") || lower.contains("temblor") -> {
+                                                respuestaIaTitulo = "PROTOCOLO SISMICO (AREQUIPA)"
+                                                respuestaIaCuerpo = "Alejate de vidrios, estanterias o cables durante el movimiento. Tras detenerse, evacua a zonas abiertas y verifica posibles replicas o cortes viales."
+                                                ondaLat = miLat
+                                                ondaLng = miLng
+                                                ondaRadioMetros = 5200.0
+                                                ondaEtiqueta = "Onda Sismica Estimada"
+                                            }
+                                            res.tipoClasificado == "deslizamiento" || lower.contains("huaico") || lower.contains("torrentera") -> {
+                                                respuestaIaTitulo = "ALERTA TORRENTERAS / LADERAS"
+                                                respuestaIaCuerpo = "No cruces cauces, badenes ni puentes con caudal activo en torrenteras o laderas. Desplazate a zonas altas y reporta bloqueos en la red."
+                                                ondaLat = miLat
+                                                ondaLng = miLng
+                                                ondaRadioMetros = 3200.0
+                                                ondaEtiqueta = "Zona de Riesgo Hidrometeorologico"
+                                            }
+                                            res.tipoClasificado == "incendio" || lower.contains("incendio") || lower.contains("fuego") -> {
+                                                respuestaIaTitulo = "RESPUESTA ANTE INCENDIO"
+                                                respuestaIaCuerpo = "Evacua en sentido opuesto al humo, mantente bajo si hay humo denso y no uses ascensores ni obstruyas el paso de unidades."
+                                                ondaLat = miLat
+                                                ondaLng = miLng
+                                                ondaRadioMetros = 1800.0
+                                                ondaEtiqueta = "Perimetro Preventivo Incendio"
+                                            }
+                                            else -> {
+                                                respuestaIaTitulo = "EVALUACION LOCAL (${res.tipoClasificado.uppercase()})"
+                                                respuestaIaCuerpo = "Confianza offline: ${String.format("%.0f", res.confianza * 100)}%. Manten GPS, Bluetooth y Wi-Fi activos para la Red Mesh vecinal y revisa las alertas en curso."
+                                            }
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = false,
+                                            onClick = { ejecutarConsultaIa("sismo fuerte en arequipa", "sismo") },
+                                            label = { Text("Sismo", color = Color(0xFFA7EBF2)) }
+                                        )
+                                        FilterChip(
+                                            selected = false,
+                                            onClick = { ejecutarConsultaIa("huaico y torrentera activa", "deslizamiento") },
+                                            label = { Text("Torrentera / Huaico", color = Color(0xFFA7EBF2)) }
+                                        )
+                                        FilterChip(
+                                            selected = false,
+                                            onClick = { ejecutarConsultaIa("incendio en zona urbana", "incendio") },
+                                            label = { Text("Incendio", color = Color(0xFFA7EBF2)) }
+                                        )
+                                        FilterChip(
+                                            selected = false,
+                                            onClick = { ejecutarConsultaIa("estado red mesh sin internet", "seguridad") },
+                                            label = { Text("Red Mesh", color = Color(0xFFA7EBF2)) }
+                                        )
+                                    }
+
+                                    OutlinedTextField(
+                                        value = consultaIaTexto,
+                                        onValueChange = { consultaIaTexto = it },
+                                        placeholder = { Text("Escribe una consulta o situacion...", color = TextoGrisSerio) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
+                                    )
+
+                                    Button(
+                                        onClick = { ejecutarConsultaIa(consultaIaTexto, "seguridad") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Consultar a SOE")
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieElevadaCarbon),
+                                border = BorderStroke(1.dp, Color(0xFF54ACBF).copy(alpha = 0.45f)),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(respuestaIaTitulo, style = MaterialTheme.typography.titleMedium, color = Color(0xFFA7EBF2))
+                                    Text(respuestaIaCuerpo, style = MaterialTheme.typography.bodyMedium, color = TextoBlancoSerio)
+                                }
+                            }
+                        }
+
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
+                }
+
                 else -> {
                     LazyColumn(
                         modifier = Modifier
@@ -1597,29 +1757,65 @@ fun PantallaPrincipalArequipa(
                         }
 
                         item {
-                            Text(
-                                "Analisis de Riesgos e Historial de Bloqueos (Arequipa)",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = TextoBlancoSerio
-                            )
-                            Text(
-                                "Registros de anos anteriores usados para calcular rutas limpias en emergencias:",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextoGrisSerio
-                            )
-                        }
-
-                        items(ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS) { ruta ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
-                                border = BorderStroke(1.dp, BordeGrafito),
+                                border = BorderStroke(1.dp, Color(0xFF54ACBF).copy(alpha = 0.45f)),
                                 shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { historialRiesgosAbierto = !historialRiesgosAbierto }
                             ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Text(ruta.nombre, style = MaterialTheme.typography.titleMedium, color = NaranjaSuaveSerio)
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(ruta.riesgoHistorico, style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Analisis de Riesgos e Historial de Bloqueos (Arequipa)",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = Color(0xFFA7EBF2)
+                                        )
+                                        Text(
+                                            if (historialRiesgosAbierto) "Toca para contraer historial" else "Desplegable: toca para ver registros históricos",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextoGrisSerio
+                                        )
+                                    }
+                                    Text(
+                                        if (historialRiesgosAbierto) "▲" else "▼",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color(0xFF54ACBF)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (historialRiesgosAbierto) {
+                            items(ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS) { ruta ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                    border = BorderStroke(1.dp, BordeGrafito),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            ondaLat = miLat
+                                            ondaLng = miLng
+                                            ondaRadioMetros = 3500.0
+                                            ondaEtiqueta = ruta.nombre
+                                            pestanaAnterior = pestanaActiva
+                                            pestanaActiva = 0
+                                            mapViewRef?.controller?.animateTo(GeoPoint(miLat, miLng))
+                                        }
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Text(ruta.nombre, style = MaterialTheme.typography.titleMedium, color = Color(0xFFA7EBF2))
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(ruta.riesgoHistorico, style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                    }
                                 }
                             }
                         }

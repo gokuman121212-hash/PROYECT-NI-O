@@ -485,7 +485,7 @@
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <input id="simStatsBackendUrl" type="text" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000"
                style="padding:8px 10px;border-radius:8px;border:1px solid var(--border,#2F3540);background:#121417;color:#F9FAFB;font-size:12px;min-width:190px;" />
-        <button type="button" id="btnIniciarSimStats" class="stats-btn-primary" onclick="iniciarRegistroSimuladorStats()">
+        <button type="button" id="btnIniciarSimStats" style="display:none;" class="stats-btn-primary" onclick="iniciarRegistroSimuladorStats()">
           Iniciar Registro
         </button>
         <button type="button" id="btnDetenerSimStats" class="stats-btn-secondary" onclick="detenerRegistroSimuladorStats()" disabled>
@@ -961,7 +961,7 @@ function exportarAlertasCsv() {
       const listaEl = document.getElementById("listaBitacora");
       const badgeContador = document.getElementById("badgeContador");
 
-      const map = L.map("mapAdmin").setView([-16.39889, -71.53694], 13);
+      const map = L.map("mapAdmin").setView([-16.39889, -71.53694], 13); window.mapAdmin = map; window.map = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap"
       }).addTo(map);
@@ -1098,9 +1098,21 @@ function exportarAlertasCsv() {
       document.getElementById("btnRegistrarAhora").addEventListener("click", () => registrarEvento(true));
 
       document.getElementById("btnLimpiar").addEventListener("click", () => {
+        try {
+          if (typeof timerRegistroSim !== "undefined" && timerRegistroSim) {
+            clearInterval(timerRegistroSim);
+            timerRegistroSim = null;
+          }
+        } catch (e) {}
+        ["alertacayma_simulador_alertas_v1", "alertacayma_simulaciones_permanentes_v1", "alertacayma_alertas_activas_internas_v1"].forEach(k => {
+          try { localStorage.removeItem(k); } catch (e) {}
+        });
         guardarEventos([]);
         renderBitacora();
-        statusSync.textContent = "Bitacora reiniciada.";
+        if (typeof renderizarEstadisticasTiempoReal === "function") {
+          try { renderizarEstadisticasTiempoReal(); } catch (e) {}
+        }
+        statusSync.textContent = "Bitacora, simulaciones y alertas locales limpiadas.";
       });
 
       document.getElementById("btnExportarJson").addEventListener("click", () => {
@@ -1848,9 +1860,12 @@ async function simularAlertaAdmin() {
       if (!eventos60s.length) {
         bitacora.innerHTML = `<span style="font-size:11px;color:#6B7280;">Sin alertas registradas en los últimos 60 segundos. Pulsa "Simular y Guardar en BD" o "Iniciar Registro".</span>`;
       } else {
-        bitacora.innerHTML = eventos60s.slice(-8).reverse().map(ev => {
+        bitacora.innerHTML = eventos60s.slice(-6).reverse().map(ev => {
           const hTxt = ev._ts.toLocaleTimeString('es-PE', { hour12: false });
-          return `<span style="padding:4px 8px;border-radius:6px;background:#1A1D22;border:1px solid #2F3540;font-size:11px;color:#E5E7EB;"><strong style="color:#38BDF8;">${hTxt}</strong> · ${(ev.tipo || 'alerta').toUpperCase()} · ${ev.distrito || 'Arequipa'}</span>`;
+          const esSim = Boolean(ev.simulado || /simul/i.test(String(ev.origen || ev.tipo || ev.id || '')));
+          const col = esSim ? '#A855F7' : '#EF4444';
+          const badge = esSim ? 'SIMULADO' : 'REAL';
+          return `<span style="padding:4px 8px;border-radius:6px;background:#1A1D22;border:1px solid ${col};font-size:11px;color:#E5E7EB;"><strong style="color:${col};">${hTxt} [${badge}]</strong> · ${(ev.tipo || 'alerta').toUpperCase()} · ${ev.distrito || 'Arequipa'}</span>`;
         }).join('');
       }
     }
@@ -2804,6 +2819,9 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta)
     if (!cont) return;
 
     if (!activasLimpias.length) {
+      if (badge) badge.textContent = '0';
+      const kpiAct = document.getElementById('cafqKpiNumActivas');
+      if (kpiAct) kpiAct.textContent = '0';
       cont.innerHTML = `<div style="padding:14px;border-radius:12px;background:#121417;border:1px solid #2F3540;color:#9CA3AF;font-size:13px;">No hay alertas activas en este momento. Las alertas manuales o emitidas aparecerán aquí automáticamente.</div>`;
       return;
     }
@@ -3606,23 +3624,27 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
   }
 
   // 1. Onda expansiva en tiempo real sobre el mapa al ocurrir o seleccionar un evento
-  window.cafqDispararOndaMapa = function(lat, lng, etiqueta, altaSeveridad) {
+  window.cafqDispararOndaMapa = function(lat, lng, etiqueta, esSimulado) {
     const mapa = buscarInstanciaMapa();
     const nLat = Number(lat) || -16.3988;
     const nLng = Number(lng) || -71.5369;
-    const radio = altaSeveridad ? 4500 : 2600;
+    const simulado = Boolean(esSimulado);
+    const radio = simulado ? 3600 : 4200;
+    const colorBorde = simulado ? '#A855F7' : '#EF4444';
+    const colorRelleno = simulado ? '#9333EA' : '#DC2626';
 
     if (!mapa || typeof L === 'undefined') return;
     try {
+      setTimeout(() => { try { mapa.invalidateSize(); } catch (e) {} }, 60);
       if (circuloOnda) mapa.removeLayer(circuloOnda);
       if (marcadorOnda) mapa.removeLayer(marcadorOnda);
 
       circuloOnda = L.circle([nLat, nLng], {
         radius: radio,
-        color: '#A7EBF2',
-        weight: 2,
-        fillColor: '#54ACBF',
-        fillOpacity: 0.22
+        color: colorBorde,
+        weight: 2.5,
+        fillColor: colorRelleno,
+        fillOpacity: 0.25
       }).addTo(mapa);
 
       const icon = L.divIcon({
@@ -3724,7 +3746,11 @@ MIT License, Copyright (c) gharsh11032000 (Harsh Gupta), H_K_MENON (Hari K Menon
       const numAct = document.getElementById('cafqKpiNumActivas');
       const badge = document.getElementById('badgeAlertasActivasAdmin');
       if (reloj) reloj.textContent = new Date().toLocaleTimeString('es-PE', { hour12: false });
-      if (numAct && badge) numAct.textContent = badge.textContent || '0';
+      if (numAct) {
+        const raw = badge ? String(badge.textContent || '0').trim() : '0';
+        const soloNum = parseInt(raw.replace(/[^\d-]/g, ''), 10);
+        numAct.textContent = Number.isFinite(soloNum) && soloNum > 0 ? String(soloNum) : '0';
+      }
     }, 1000);
   }
 
