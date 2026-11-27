@@ -2170,5 +2170,64 @@ async function simularAlertaAdmin() {
   }
 })();
 </script>
+<script>
+(function habilitarSimulacionPermanenteSinUvicorn() {
+  const CLAVE_SIM_PERM = 'alertacayma_simulaciones_permanentes_v1';
+
+  function leerSimPermanentes() {
+    try {
+      const raw = localStorage.getItem(CLAVE_SIM_PERM);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function guardarSimPermanente(alertaObj) {
+    const lista = leerSimPermanentes();
+    lista.push(alertaObj);
+    try {
+      localStorage.setItem(CLAVE_SIM_PERM, JSON.stringify(lista));
+    } catch (_) {}
+    return lista.length;
+  }
+
+  window.obtenerSimulacionesPermanentes = leerSimPermanentes;
+
+  const originalSimular = window.simularAlertaAdmin;
+  window.simularAlertaAdmin = async function() {
+    const tipo = document.getElementById('simAlertaTipo')?.value || 'sismo';
+    const distrito = document.getElementById('simAlertaDistrito')?.value || document.getElementById('simStatsDistrito')?.value || 'Cayma';
+    const desc = document.getElementById('simAlertaDesc')?.value || `Simulación de ${tipo} en ${distrito}`;
+    const estadoEl = document.getElementById('simAlertaEstado');
+
+    const registroLocal = {
+      alerta_id: `sim_perm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      tipo: tipo,
+      distrito: distrito,
+      descripcion: desc,
+      timestamp: new Date().toISOString(),
+      es_simulacion: true,
+      persistencia: 'local_permanente'
+    };
+
+    if (typeof originalSimular === 'function') {
+      try {
+        await originalSimular();
+      } catch (_) {}
+    }
+
+    const totalGuardadas = guardarSimPermanente(registroLocal);
+    if (typeof window.renderizarPlanosSimulador === 'function') {
+      window.renderizarPlanosSimulador();
+    }
+
+    if (estadoEl) {
+      estadoEl.textContent = `Simulación guardada permanentemente en navegador (${registroLocal.alerta_id}) · Total acumuladas: ${totalGuardadas}. Funciona sin uvicorn activo.`;
+    }
+  };
+})();
+</script>
 </body>
 </html>
