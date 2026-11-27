@@ -1,4 +1,4 @@
-﻿package com.cayma.alertasos.ui
+package com.cayma.alertasos.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -69,6 +69,7 @@ fun PantallaAutenticacionArequipa(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "RED VECINAL AREQUIPA SOS",
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = AzulOscuroTexto
                 )
@@ -102,7 +103,7 @@ fun PantallaAutenticacionArequipa(
                     OutlinedTextField(
                         value = nombreCompleto,
                         onValueChange = { nombreCompleto = it },
-                        label = { Text("Nombres y Apellidos") },
+                        label = { Text("Nombres y Apellidos", style = MaterialTheme.typography.bodySmall) },
                         leadingIcon = { Icon(Icons.Default.Person, null) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -112,7 +113,7 @@ fun PantallaAutenticacionArequipa(
                 OutlinedTextField(
                     value = telefono,
                     onValueChange = { telefono = it },
-                    label = { Text("Numero de Celular") },
+                    label = { Text("Numero de Celular", style = MaterialTheme.typography.bodySmall) },
                     leadingIcon = { Icon(Icons.Default.Phone, null) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -121,7 +122,7 @@ fun PantallaAutenticacionArequipa(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Contrasena") },
+                    label = { Text("Contrasena", style = MaterialTheme.typography.bodySmall) },
                     leadingIcon = { Icon(Icons.Default.Lock, null) },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
@@ -137,7 +138,7 @@ fun PantallaAutenticacionArequipa(
                             value = distritoSeleccionado,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Distrito en Arequipa Ciudad") },
+                            label = { Text("Distrito en Arequipa Ciudad", style = MaterialTheme.typography.bodySmall) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandirDistritos) },
                             modifier = Modifier
                                 .menuAnchor()
@@ -149,7 +150,7 @@ fun PantallaAutenticacionArequipa(
                         ) {
                             ArequipaGeoData.DISTRITOS_HABILITADOS.forEach { dist ->
                                 DropdownMenuItem(
-                                    text = { Text(dist) },
+                                    text = { Text(dist, style = MaterialTheme.typography.bodyMedium) },
                                     onClick = {
                                         distritoSeleccionado = dist
                                         expandirDistritos = false
@@ -162,8 +163,8 @@ fun PantallaAutenticacionArequipa(
                     OutlinedTextField(
                         value = sectorReferencia,
                         onValueChange = { sectorReferencia = it },
-                        label = { Text("Urbanizacion / Sector / Referencia exacta") },
-                        placeholder = { Text("Ej. Av. Obrera cdra 4, frente a parque") },
+                        label = { Text("Urbanizacion / Sector / Referencia exacta", style = MaterialTheme.typography.bodySmall) },
+                        placeholder = { Text("Ej. Av. Obrera cdra 4, frente a parque", style = MaterialTheme.typography.bodySmall) },
                         leadingIcon = { Icon(Icons.Default.Home, null) },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -237,7 +238,6 @@ fun PantallaAutenticacionArequipa(
                                     SessionManager.guardarSesion(context, perfil)
                                     onAutenticado(perfil)
                                 } catch (_: Exception) {
-                                    // Modo respaldo local sin servidor activo
                                     val perfilLocal = PerfilCiudadano(
                                         usuarioId = "usr_${UUID.randomUUID().toString().take(8)}",
                                         nombreCompleto = nombreCompleto.trim(),
@@ -280,6 +280,7 @@ fun PantallaAutenticacionArequipa(
                 ) {
                     Text(
                         text = if (cargando) "Verificando respaldo dual..." else if (modoRegistro) "CREAR CUENTA SEGURA" else "INGRESAR A LA RED",
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -294,6 +295,7 @@ fun PantallaAutenticacionArequipa(
                 ) {
                     Text(
                         text = if (modoRegistro) "Ya tengo cuenta — Iniciar Sesion" else "No tengo cuenta — Registrarme en Arequipa",
+                        style = MaterialTheme.typography.labelLarge,
                         color = AzulPrincipal,
                         fontWeight = FontWeight.SemiBold
                     )

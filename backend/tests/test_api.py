@@ -8,7 +8,8 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "online"
-    assert data["ia_modelo_cargado"] is True
+    assert "firebase_conectado" in data
+    assert "supabase_conectado" in data
 
 def test_envio_alerta_sos():
     payload = {

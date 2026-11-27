@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import json
 import httpx
@@ -7,7 +8,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
 from app.core.config import settings
 
-MODEL_PATH = "app/ml/modelo_emergencias.joblib"
+MODEL_PATH = Path(__file__).resolve().parent / "modelo_emergencias.joblib"
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_DEDICATED_MODEL = os.getenv("OLLAMA_MODEL", "alerta-cayma")
 OLLAMA_BASE_MODEL = "llama3.2:1b"

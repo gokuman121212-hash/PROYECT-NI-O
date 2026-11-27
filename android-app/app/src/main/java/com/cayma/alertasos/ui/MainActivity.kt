@@ -1,10 +1,12 @@
-﻿package com.cayma.alertasos.ui
+package com.cayma.alertasos.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
@@ -14,8 +16,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +45,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +61,9 @@ import com.cayma.alertasos.mesh.PaqueteMesh
 import com.cayma.alertasos.network.*
 import com.cayma.alertasos.sensors.SensoresRiesgoManager
 import com.google.gson.Gson
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
@@ -51,6 +73,30 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
+
+private val FondoCarbonSerio = Color(0xFF121417)
+private val SuperficieCarbon = Color(0xFF1A1D22)
+private val SuperficieElevadaCarbon = Color(0xFF23272E)
+private val BordeGrafito = Color(0xFF2F3540)
+private val TextoBlancoSerio = Color(0xFFF3F4F6)
+private val TextoGrisSerio = Color(0xFF9CA3AF)
+private val NaranjaFuegoSerio = Color(0xFFFF4500)
+private val NaranjaSuaveSerio = Color(0xFFFF7A3D)
+private val PlataAceroSerio = Color(0xFFD1D5DB)
+
+private data class RegistroCatastrofeEvento(
+    val id: String,
+    val fechaHora: String,
+    val tipoEvento: String,
+    val queOcurrio: String,
+    val dondeOcurrio: String,
+    val coordenadas: String,
+    val origen: String
+)
+
+private fun obtenerMarcaTiempoActual(): String {
+    return SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date())
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -95,71 +141,235 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    override fun onResume() {
-        super.onResume()
-        offlineAiEngine.inicializarMientrasAppEnUso()
-        sensoresManager.iniciarMonitoreo()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        offlineAiEngine.liberarMemoriaAlCerrar()
-        sensoresManager.detenerMonitoreo()
-    }
 }
 
-fun crearIconoSeguridadDinamico(
+private fun crearFiltroAzulMarinoTech(): ColorMatrixColorFilter {
+    val monoGrafito = ColorMatrix(
+        floatArrayOf(
+            -0.55f, 0f, 0f, 0f, 176f,
+            0f, -0.55f, 0f, 0f, 180f,
+            0f, 0f, -0.55f, 0f, 188f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+    val sat = ColorMatrix().apply { setSaturation(0.22f) }
+    val contrast = 1.22f
+    val translate = (-0.5f * contrast + 0.5f) * 255f
+    val contrastMatrix = ColorMatrix(
+        floatArrayOf(
+            contrast, 0f, 0f, 0f, translate,
+            0f, contrast, 0f, 0f, translate,
+            0f, 0f, contrast, 0f, translate,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+    monoGrafito.postConcat(sat)
+    monoGrafito.postConcat(contrastMatrix)
+    return ColorMatrixColorFilter(monoGrafito)
+}
+
+private fun crearIconoSeguridadDinamico(
     context: android.content.Context,
-    tipo: String,
-    zoomActual: Double
+    tipoCentro: String,
+    zoom: Double
 ): BitmapDrawable {
-    // Escala inversa: grande cuando el mapa esta alejado (58px) y se achica al acercarse (22px)
-    val factor = ((17.5 - zoomActual) / 5.0).coerceIn(0.0, 1.0)
-    val sizePx = (22 + (36 * factor)).toInt()
-
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val factor = ((zoom - 11.5) / 7.5).coerceIn(0.0, 1.0)
+    val radioPx = (30f - (factor * 14f)).toFloat().coerceAtLeast(15f)
+    val tamano = (radioPx * 2f + 16f).toInt().coerceAtLeast(38)
+    val bitmap = Bitmap.createBitmap(tamano, tamano, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    val centro = sizePx / 2f
-    val radio = (sizePx / 2f) - 3f
+    val centro = tamano / 2f
 
-    // Fondo circular blanco con sombra/borde de color segun institucion
-    paint.style = Paint.Style.FILL
-    paint.color = AndroidColor.WHITE
-    canvas.drawCircle(centro, centro, radio, paint)
-
-    paint.style = Paint.Style.STROKE
-    paint.strokeWidth = (sizePx * 0.10f).coerceAtLeast(2.5f)
-    paint.color = when (tipo) {
-        "hospital" -> AndroidColor.rgb(211, 47, 47)   // Rojo Salud
-        "comisaria" -> AndroidColor.rgb(21, 101, 192) // Azul PNP
-        else -> AndroidColor.rgb(46, 125, 50)         // Verde Zona Segura
+    val colorFondo = when (tipoCentro.lowercase()) {
+        "hospital" -> AndroidColor.rgb(255, 69, 0)
+        "comisaria" -> AndroidColor.rgb(209, 213, 219)
+        else -> AndroidColor.rgb(156, 163, 175)
     }
-    canvas.drawCircle(centro, centro, radio, paint)
-
-    // Simbolo interior limpio (Cruz roja para salud, Escudo/Cuadro azul para PNP, Punto verde para refugio)
-    paint.style = Paint.Style.FILL
-    val rInner = radio * 0.52f
-    when (tipo) {
-        "hospital" -> {
-            val grosor = rInner * 0.42f
-            canvas.drawRect(centro - grosor, centro - rInner, centro + grosor, centro + rInner, paint)
-            canvas.drawRect(centro - rInner, centro - grosor, centro + rInner, centro + grosor, paint)
-        }
-        "comisaria" -> {
-            canvas.drawRect(centro - rInner * 0.75f, centro - rInner * 0.75f, centro + rInner * 0.75f, centro + rInner * 0.75f, paint)
-        }
-        else -> {
-            canvas.drawCircle(centro, centro, rInner * 0.75f, paint)
-        }
+    val letra = when (tipoCentro.lowercase()) {
+        "hospital" -> "H"
+        "comisaria" -> "P"
+        else -> "S"
     }
+
+    val paintGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(95, AndroidColor.red(colorFondo), AndroidColor.green(colorFondo), AndroidColor.blue(colorFondo))
+        style = Paint.Style.FILL
+    }
+    val paintCirculo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = colorFondo
+        style = Paint.Style.FILL
+    }
+    val paintBorde = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 3.5f
+    }
+    val paintTexto = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(18, 20, 23)
+        textSize = radioPx * 0.92f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+
+    canvas.drawCircle(centro, centro, radioPx + 5f, paintGlow)
+    canvas.drawCircle(centro, centro, radioPx, paintCirculo)
+    canvas.drawCircle(centro, centro, radioPx, paintBorde)
+    val yTexto = centro - ((paintTexto.descent() + paintTexto.ascent()) / 2f)
+    canvas.drawText(letra, centro, yTexto, paintTexto)
 
     return BitmapDrawable(context.resources, bitmap)
 }
 
-@SuppressLint("ClickableViewAccessibility")
+@Composable
+private fun BotonIconoTranslúcidoReactivo(
+    icono: ImageVector,
+    descripcion: String,
+    colorTacto: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    contenidoExtra: (@Composable () -> Unit)? = null
+) {
+    val interaccion = remember { MutableInteractionSource() }
+    val presionado by interaccion.collectIsPressedAsState()
+
+    val fondoAnimado by animateColorAsState(
+        targetValue = if (presionado) colorTacto.copy(alpha = 0.24f) else SuperficieElevadaCarbon.copy(alpha = 0.72f),
+        animationSpec = tween(140),
+        label = "fondo_boton_reactivo"
+    )
+    val bordeAnimado by animateColorAsState(
+        targetValue = if (presionado) colorTacto.copy(alpha = 0.9f) else BordeGrafito,
+        animationSpec = tween(140),
+        label = "borde_boton_reactivo"
+    )
+    val iconoColorAnimado by animateColorAsState(
+        targetValue = if (presionado) colorTacto else TextoBlancoSerio,
+        animationSpec = tween(140),
+        label = "icono_boton_reactivo"
+    )
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        interactionSource = interaccion,
+        color = fondoAnimado,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, bordeAnimado),
+        modifier = Modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (contenidoExtra != null) {
+                contenidoExtra()
+            } else {
+                Icon(
+                    imageVector = icono,
+                    contentDescription = descripcion,
+                    tint = iconoColorAnimado,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 4.dp)
+                    .size(if (presionado) 6.dp else 4.dp)
+                    .background(
+                        color = if (presionado) colorTacto else colorTacto.copy(alpha = 0.35f),
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun ItemApartadoAnimado(
+    titulo: String,
+    icono: ImageVector,
+    seleccionado: Boolean,
+    acentoColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interaccion = remember { MutableInteractionSource() }
+    val presionado by interaccion.collectIsPressedAsState()
+    val resplandor = seleccionado || presionado
+
+    val saltoY by animateFloatAsState(
+        targetValue = if (seleccionado) -6f else if (presionado) -3f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "salto_icono"
+    )
+    val escala by animateFloatAsState(
+        targetValue = if (resplandor) 1.1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "escala_icono"
+    )
+    val cajaFondo by animateColorAsState(
+        targetValue = when {
+            presionado -> acentoColor.copy(alpha = 0.25f)
+            seleccionado -> acentoColor.copy(alpha = 0.14f)
+            else -> Color.Transparent
+        },
+        animationSpec = tween(150),
+        label = "caja_apartado"
+    )
+    val colorIcono by animateColorAsState(
+        targetValue = if (resplandor) acentoColor else TextoGrisSerio,
+        animationSpec = tween(150),
+        label = "color_icono_apartado"
+    )
+
+    Column(
+        modifier = modifier
+            .clickable(
+                interactionSource = interaccion,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(vertical = 5.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(y = saltoY.dp)
+                .scale(escala)
+                .background(color = cajaFondo, shape = RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 5.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icono,
+                contentDescription = titulo,
+                tint = colorIcono,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = titulo,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (resplandor) TextoBlancoSerio else TextoGrisSerio,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(2.dp))
+        Box(
+            modifier = Modifier
+                .size(if (resplandor) 5.dp else 0.dp)
+                .background(acentoColor, CircleShape)
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("ClickableViewAccessibility")
 @Composable
 fun PantallaPrincipalArequipa(
     perfil: PerfilCiudadano,
@@ -174,9 +384,17 @@ fun PantallaPrincipalArequipa(
     val scope = rememberCoroutineScope()
     val gson = remember { Gson() }
 
-    // 3 PESTAÑAS SEPARADAS: 0 = Mapa, 1 = Alertas, 2 = Riesgos e Historial
     var pestanaActiva by remember { mutableIntStateOf(0) }
+    var pestanaAnterior by remember { mutableIntStateOf(0) }
     val estadoSensor by sensoresManager.estadoRiesgo.collectAsState()
+    var sincronizando by remember { mutableStateOf(false) }
+    var filtroCapaMapa by remember { mutableStateOf("TODOS") }
+
+    // Estado sincronizado desde el Panel Web de Administrador (sin controles admin en el celular)
+    var registroCatastrofeActivo by remember { mutableStateOf(false) }
+    var registrosCatastrofeAutomaticos by remember { mutableStateOf<List<RegistroCatastrofeEvento>>(emptyList()) }
+    var idsAlertasRegistradasCatastrofe by remember { mutableStateOf(setOf<String>()) }
+    var ultimoRiesgoSensorRegistrado by remember { mutableStateOf(false) }
 
     var alertasActivas by remember {
         mutableStateOf(
@@ -206,10 +424,74 @@ fun PantallaPrincipalArequipa(
     var mostrarDialogoEmitir by remember { mutableStateOf(false) }
     var tipoAlertaEmitir by remember { mutableStateOf("deslizamiento") }
     var contextoAlertaEmitir by remember { mutableStateOf("") }
-    var filtroInstituciones by remember { mutableStateOf("todos") }
     var vecinosMeshCount by remember { mutableIntStateOf(0) }
     var bannerAviso by remember { mutableStateOf<String?>(null) }
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    val miLatActual = if (ArequipaGeoData.estaEnArequipaMetropolitana(locationManager.ultimaLatitud, locationManager.ultimaLongitud) && locationManager.ultimaLatitud != 0.0) {
+        locationManager.ultimaLatitud
+    } else {
+        perfil.latitud
+    }
+    val miLngActual = if (ArequipaGeoData.estaEnArequipaMetropolitana(locationManager.ultimaLatitud, locationManager.ultimaLongitud) && locationManager.ultimaLongitud != 0.0) {
+        locationManager.ultimaLongitud
+    } else {
+        perfil.longitud
+    }
+
+    fun registrarEventoCatastrofeSiActivo(
+        tipo: String,
+        queOcurrio: String,
+        dondeOcurrio: String,
+        lat: Double,
+        lng: Double,
+        origen: String
+    ) {
+        if (!registroCatastrofeActivo) return
+        val nuevo = RegistroCatastrofeEvento(
+            id = "cat_${System.currentTimeMillis()}_${registrosCatastrofeAutomaticos.size + 1}",
+            fechaHora = obtenerMarcaTiempoActual(),
+            tipoEvento = tipo.uppercase(),
+            queOcurrio = queOcurrio,
+            dondeOcurrio = dondeOcurrio,
+            coordenadas = "${String.format(Locale.US, "%.5f", lat)}, ${String.format(Locale.US, "%.5f", lng)}",
+            origen = origen
+        )
+        registrosCatastrofeAutomaticos = listOf(nuevo) + registrosCatastrofeAutomaticos
+    }
+
+    LaunchedEffect(estadoSensor.riesgoRealDetectado, registroCatastrofeActivo) {
+        if (registroCatastrofeActivo && estadoSensor.riesgoRealDetectado && !ultimoRiesgoSensorRegistrado) {
+            registrarEventoCatastrofeSiActivo(
+                tipo = if (estadoSensor.tipoRiesgoDetectado != "NINGUNO") estadoSensor.tipoRiesgoDetectado else "SISMO",
+                queOcurrio = estadoSensor.detalleSensor,
+                dondeOcurrio = "${perfil.distrito} — ${perfil.sectorReferencia}",
+                lat = miLatActual,
+                lng = miLngActual,
+                origen = "SENSOR AUTOMATICO"
+            )
+        }
+        ultimoRiesgoSensorRegistrado = estadoSensor.riesgoRealDetectado
+    }
+
+    LaunchedEffect(alertasActivas, registroCatastrofeActivo) {
+        if (registroCatastrofeActivo) {
+            val nuevas = alertasActivas.filter { it.alerta_id !in idsAlertasRegistradasCatastrofe }
+            if (nuevas.isNotEmpty()) {
+                nuevas.forEach { al ->
+                    registrarEventoCatastrofeSiActivo(
+                        tipo = al.categoria,
+                        queOcurrio = "${al.nombre_usuario}: ${al.descripcion}",
+                        dondeOcurrio = "${al.distrito}${if (al.sector_referencia.isNotBlank()) " — ${al.sector_referencia}" else ""}",
+                        lat = al.lat,
+                        lng = al.lng,
+                        origen = if (al.origen_offline_mesh) "RED MESH" else "ALERTA VECINAL"
+                    )
+                }
+                idsAlertasRegistradasCatastrofe = idsAlertasRegistradasCatastrofe + nuevas.map { it.alerta_id }
+            }
+        }
+    }
 
     val meshManager = remember {
         OfflineMeshManager(context) { paquete ->
@@ -276,7 +558,9 @@ fun PantallaPrincipalArequipa(
         }
     }
 
-    suspend fun sincronizarConServidor() {
+    suspend fun sincronizarConServidor(mostrarMensajeManual: Boolean = false) {
+        sincronizando = true
+        var actualizadoRemoto = false
         try {
             val mapaResp = apiService.obtenerMapaCalor()
             if (mapaResp.puntos.isNotEmpty()) {
@@ -288,10 +572,22 @@ fun PantallaPrincipalArequipa(
                         true,
                         "Lluvia ${clima.precipitacion_mm}mm - Torrenteras ${clima.alerta_torrenteras}"
                     )
+                    if (!registroCatastrofeActivo) {
+                        registroCatastrofeActivo = true
+                    }
                 }
             }
+            actualizadoRemoto = true
         } catch (_: Exception) { }
         vecinosMeshCount = meshManager.cantidadVecinosConectados
+        sincronizando = false
+        if (mostrarMensajeManual) {
+            bannerAviso = if (actualizadoRemoto) {
+                "Sincronizado con el servidor ($vecinosMeshCount nodos mesh cercanos)."
+            } else {
+                "Modo sin internet activo: usando base local + Red Mesh ($vecinosMeshCount vecinos)."
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -302,75 +598,76 @@ fun PantallaPrincipalArequipa(
         }
     }
 
-    val miLat = if (ArequipaGeoData.estaEnArequipaMetropolitana(locationManager.ultimaLatitud, locationManager.ultimaLongitud) && locationManager.ultimaLatitud != 0.0) {
-        locationManager.ultimaLatitud
-    } else {
-        perfil.latitud
-    }
-    val miLng = if (ArequipaGeoData.estaEnArequipaMetropolitana(locationManager.ultimaLatitud, locationManager.ultimaLongitud) && locationManager.ultimaLongitud != 0.0) {
-        locationManager.ultimaLongitud
-    } else {
-        perfil.longitud
-    }
+    val miLat = miLatActual
+    val miLng = miLngActual
 
     Scaffold(
-        containerColor = FondoHielo,
+        containerColor = FondoCarbonSerio,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SuperficieBlanca),
-                title = {
-                    Column {
-                        Text("Alerta Arequipa", fontWeight = FontWeight.Bold, color = AzulOscuroTexto)
-                        Text(
-                            "${perfil.nombreCompleto} • ${perfil.distrito}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GrisTextoSecundario
-                        )
-                    }
-                },
-                actions = {
-                    // Indicador compacto de emergencias activas
-                    Surface(
-                        color = if (alertasActivas.isNotEmpty()) RojoFondoSuave else CelesteSuave,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+            Surface(
+                color = SuperficieCarbon.copy(alpha = 0.88f),
+                tonalElevation = 0.dp,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = TextoBlancoSerio,
+                        actionIconContentColor = TextoBlancoSerio
+                    ),
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .background(
-                                        if (alertasActivas.isNotEmpty()) RojoInfrarrojo else AzulPrincipal,
+                                        if (registroCatastrofeActivo) NaranjaFuegoSerio else NaranjaSuaveSerio,
                                         CircleShape
                                     )
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                "${alertasActivas.size} SOS",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AzulOscuroTexto
+                                text = "ALERTA AREQUIPA",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextoBlancoSerio
                             )
                         }
+                    },
+                    actions = {
+                        BotonIconoTranslúcidoReactivo(
+                            icono = Icons.Default.Refresh,
+                            descripcion = "Actualizar",
+                            colorTacto = PlataAceroSerio,
+                            enabled = !sincronizando,
+                            onClick = { scope.launch { sincronizarConServidor(mostrarMensajeManual = true) } },
+                            contenidoExtra = if (sincronizando) {
+                                {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = NaranjaFuegoSerio
+                                    )
+                                }
+                            } else null
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        BotonIconoTranslúcidoReactivo(
+                            icono = Icons.Default.ExitToApp,
+                            descripcion = "Cerrar sesion",
+                            colorTacto = NaranjaFuegoSerio,
+                            onClick = onCerrarSesion
+                        )
+                        Spacer(Modifier.width(10.dp))
                     }
-                    IconButton(onClick = { scope.launch { sincronizarConServidor() } }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar", tint = AzulPrincipal)
-                    }
-                    IconButton(onClick = onCerrarSesion) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Salir", tint = GrisTextoSecundario)
-                    }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             Column {
-                // Barra inferior persistente cuando vas en apoyo a un vecino
                 if (alertaEnApoyo != null) {
                     Surface(
-                        color = VerdeAyuda,
+                        color = NaranjaFuegoSerio.copy(alpha = 0.94f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -383,12 +680,12 @@ fun PantallaPrincipalArequipa(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "AYUDA EN CAMINO",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = TextoBlancoSerio
                                 )
                                 Text(
-                                    "Ruta limpia hacia ${alertaEnApoyo!!.nombre_usuario} (${alertaEnApoyo!!.distrito})",
-                                    color = Color.White.copy(alpha = 0.9f),
+                                    "Ruta segura hacia ${alertaEnApoyo!!.nombre_usuario} (${alertaEnApoyo!!.distrito})",
+                                    color = TextoBlancoSerio.copy(alpha = 0.95f),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -399,567 +696,970 @@ fun PantallaPrincipalArequipa(
                                         scope.launch {
                                             try {
                                                 mensajesChat = apiService.obtenerChat(alertaEnApoyo!!.alerta_id).mensajes
-                                            } catch (_: Exception) {}
+                                            } catch (_: Exception) {
+                                                val locales = dbLocal.alertaDao().obtenerChatPorAlerta(alertaEnApoyo!!.alerta_id)
+                                                mensajesChat = locales.map {
+                                                    MensajeChatDto(
+                                                        remitente_id = it.remitenteId,
+                                                        nombre_remitente = it.nombreRemitente,
+                                                        rol = it.rol,
+                                                        mensaje = it.mensaje,
+                                                        origen_mesh = it.origenMesh
+                                                    )
+                                                }
+                                            }
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                    colors = ButtonDefaults.buttonColors(containerColor = FondoCarbonSerio),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.Email, null, tint = VerdeAyuda, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Email, null, tint = TextoBlancoSerio, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Chat", color = VerdeAyuda, fontWeight = FontWeight.Bold)
+                                    Text("Chat", style = MaterialTheme.typography.labelLarge, color = TextoBlancoSerio)
                                 }
                                 IconButton(onClick = { alertaEnApoyo = null }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Finalizar", tint = Color.White)
+                                    Icon(Icons.Default.Close, contentDescription = "Finalizar apoyo", tint = TextoBlancoSerio)
                                 }
                             }
                         }
                     }
                 }
 
-                // BARRA DE NAVEGACION DE 3 SECCIONES SEPARADAS
-                NavigationBar(containerColor = SuperficieBlanca) {
-                    NavigationBarItem(
-                        selected = pestanaActiva == 0,
-                        onClick = { pestanaActiva = 0 },
-                        icon = { Icon(Icons.Default.Place, contentDescription = "Mapa") },
-                        label = { Text("Mapa") }
-                    )
-                    NavigationBarItem(
-                        selected = pestanaActiva == 1,
-                        onClick = { pestanaActiva = 1 },
-                        icon = { Icon(Icons.Default.Warning, contentDescription = "Alertas") },
-                        label = { Text("Alertas (${alertasActivas.size})") }
-                    )
-                    NavigationBarItem(
-                        selected = pestanaActiva == 2,
-                        onClick = { pestanaActiva = 2 },
-                        icon = { Icon(Icons.Default.Info, contentDescription = "Riesgos e Historial") },
-                        label = { Text("Riesgos e Historial") }
-                    )
+                Surface(
+                    color = SuperficieCarbon.copy(alpha = 0.88f),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ItemApartadoAnimado(
+                            titulo = "MAPA",
+                            icono = Icons.Default.Place,
+                            seleccionado = pestanaActiva == 0,
+                            acentoColor = PlataAceroSerio,
+                            onClick = {
+                                pestanaAnterior = pestanaActiva
+                                pestanaActiva = 0
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ItemApartadoAnimado(
+                            titulo = "ALERTAS (${alertasActivas.size})",
+                            icono = Icons.Default.Warning,
+                            seleccionado = pestanaActiva == 1,
+                            acentoColor = NaranjaFuegoSerio,
+                            onClick = {
+                                pestanaAnterior = pestanaActiva
+                                pestanaActiva = 1
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ItemApartadoAnimado(
+                            titulo = "RIESGOS",
+                            icono = Icons.Default.Info,
+                            seleccionado = pestanaActiva == 2,
+                            acentoColor = if (registroCatastrofeActivo) NaranjaFuegoSerio else PlataAceroSerio,
+                            onClick = {
+                                pestanaAnterior = pestanaActiva
+                                pestanaActiva = 2
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
     ) { padding ->
-        when (pestanaActiva) {
-            // =========================================================================
-            // PESTAÑA 1: MAPA A PANTALLA COMPLETA (MOVIMIENTO FLUIDO SIN SCROLL)
-            // =========================================================================
-            0 -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            MapView(ctx).apply {
-                                setTileSource(TileSourceFactory.MAPNIK)
-                                setMultiTouchControls(true)
-                                isHorizontalMapRepetitionEnabled = false
-                                isVerticalMapRepetitionEnabled = false
-                                tilesScaleFactor = 1.6f
-                                minZoomLevel = 11.5
-                                maxZoomLevel = 19.0
-                                controller.setZoom(13.2)
-                                controller.setCenter(GeoPoint(miLat, miLng))
-                                addMapListener(object : org.osmdroid.events.MapListener {
-                                    override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean = false
-                                    override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
-                                        val z = event?.zoomLevel ?: zoomLevelDouble
-                                        overlays.filterIsInstance<Marker>().forEach { m ->
-                                            val tipoCentro = m.relatedObject as? String
-                                            if (tipoCentro != null) {
-                                                m.icon = crearIconoSeguridadDinamico(ctx, tipoCentro, z)
+        val direccionSalto = if (pestanaActiva >= pestanaAnterior) 1 else -1
+
+        AnimatedContent(
+            targetState = pestanaActiva,
+            transitionSpec = {
+                (slideInHorizontally(
+                    animationSpec = tween(durationMillis = 280),
+                    initialOffsetX = { fullWidth -> direccionSalto * (fullWidth / 3) }
+                ) + fadeIn(animationSpec = tween(durationMillis = 220)))
+                    .togetherWith(
+                        slideOutHorizontally(
+                            animationSpec = tween(durationMillis = 240),
+                            targetOffsetX = { fullWidth -> -direccionSalto * (fullWidth / 4) }
+                        ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                    )
+            },
+            label = "salto_apartado"
+        ) { targetPestana ->
+            when (targetPestana) {
+                0 -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .background(FondoCarbonSerio)
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                MapView(ctx).apply {
+                                    setTileSource(TileSourceFactory.MAPNIK)
+                                    setMultiTouchControls(true)
+                                    isHorizontalMapRepetitionEnabled = false
+                                    isVerticalMapRepetitionEnabled = false
+                                    tilesScaleFactor = 1.65f
+                                    minZoomLevel = 11.5
+                                    maxZoomLevel = 19.0
+                                    controller.setZoom(13.6)
+                                    controller.setCenter(GeoPoint(miLat, miLng))
+
+                                    overlayManager.tilesOverlay.setColorFilter(crearFiltroAzulMarinoTech())
+
+                                    addMapListener(object : org.osmdroid.events.MapListener {
+                                        override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean = false
+                                        override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
+                                            val z = event?.zoomLevel ?: zoomLevelDouble
+                                            overlays.filterIsInstance<Marker>().forEach { m ->
+                                                val tipoCentro = m.relatedObject as? String
+                                                if (tipoCentro != null) {
+                                                    m.icon = crearIconoSeguridadDinamico(ctx, tipoCentro, z)
+                                                }
+                                            }
+                                            invalidate()
+                                            return true
+                                        }
+                                    })
+                                    setOnTouchListener { v, event ->
+                                        when (event.action) {
+                                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                                                v.parent?.requestDisallowInterceptTouchEvent(true)
+                                            }
+                                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                                v.parent?.requestDisallowInterceptTouchEvent(false)
                                             }
                                         }
-                                        invalidate()
-                                        return true
+                                        false
                                     }
-                                })
-                                // Evitar que el contenedor padre intercepte los gestos tactiles del mapa
-                                setOnTouchListener { v, event ->
-                                    when (event.action) {
-                                        MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                                            v.parent?.requestDisallowInterceptTouchEvent(true)
+                                    mapViewRef = this
+                                }
+                            },
+                            update = { mapView ->
+                                mapView.overlays.clear()
+
+                                if (filtroCapaMapa == "TODOS" || filtroCapaMapa == "BLOQUEOS") {
+                                    ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS.forEach { bloqueo ->
+                                        val haloBloqueo = Polyline().apply {
+                                            addPoint(GeoPoint(bloqueo.latInicio, bloqueo.lngInicio))
+                                            addPoint(GeoPoint(bloqueo.latFin, bloqueo.lngFin))
+                                            outlinePaint.color = AndroidColor.argb(90, 255, 69, 0)
+                                            outlinePaint.strokeWidth = 20f
                                         }
-                                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                            v.parent?.requestDisallowInterceptTouchEvent(false)
+                                        val lineaBloqueo = Polyline().apply {
+                                            addPoint(GeoPoint(bloqueo.latInicio, bloqueo.lngInicio))
+                                            addPoint(GeoPoint(bloqueo.latFin, bloqueo.lngFin))
+                                            outlinePaint.color = AndroidColor.rgb(255, 69, 0)
+                                            outlinePaint.strokeWidth = 8f
+                                            title = "VIA CON HISTORIAL DE BLOQUEO: ${bloqueo.nombre}"
+                                        }
+                                        mapView.overlays.add(haloBloqueo)
+                                        mapView.overlays.add(lineaBloqueo)
+                                    }
+                                }
+
+                                alertaEnApoyo?.let { destino ->
+                                    val puntosRuta = ArequipaGeoData.calcularRutaLibreDeBloqueos(
+                                        miLat, miLng, destino.lat, destino.lng
+                                    )
+                                    val glowRuta = Polyline().apply {
+                                        puntosRuta.forEach { (lat, lng) -> addPoint(GeoPoint(lat, lng)) }
+                                        outlinePaint.color = AndroidColor.argb(115, 255, 69, 0)
+                                        outlinePaint.strokeWidth = 26f
+                                    }
+                                    val rutaFuego = Polyline().apply {
+                                        puntosRuta.forEach { (lat, lng) -> addPoint(GeoPoint(lat, lng)) }
+                                        outlinePaint.color = AndroidColor.rgb(255, 69, 0)
+                                        outlinePaint.strokeWidth = 11f
+                                        title = "Ruta recomendada libre hacia ${destino.nombre_usuario}"
+                                    }
+                                    mapView.overlays.add(glowRuta)
+                                    mapView.overlays.add(rutaFuego)
+                                }
+
+                                if (filtroCapaMapa == "TODOS" || filtroCapaMapa == "SOS") {
+                                    alertasActivas.forEach { alerta ->
+                                        val centro = GeoPoint(alerta.lat, alerta.lng)
+
+                                        val haloExterno = Polygon().apply {
+                                            points = Polygon.pointsAsCircle(centro, 430.0)
+                                            fillPaint.color = AndroidColor.argb(65, 255, 69, 0)
+                                            outlinePaint.color = AndroidColor.argb(190, 255, 69, 0)
+                                            outlinePaint.strokeWidth = 3f
+                                        }
+                                        val nucleoCalor = Polygon().apply {
+                                            points = Polygon.pointsAsCircle(centro, 155.0)
+                                            fillPaint.color = AndroidColor.argb(150, 255, 69, 0)
+                                            outlinePaint.color = AndroidColor.rgb(255, 122, 61)
+                                            outlinePaint.strokeWidth = 4f
+                                        }
+                                        val puntoCentralSos = Polygon().apply {
+                                            points = Polygon.pointsAsCircle(centro, 30.0)
+                                            fillPaint.color = AndroidColor.rgb(255, 69, 0)
+                                            outlinePaint.color = AndroidColor.WHITE
+                                            outlinePaint.strokeWidth = 4f
+                                        }
+                                        mapView.overlays.add(haloExterno)
+                                        mapView.overlays.add(nucleoCalor)
+                                        mapView.overlays.add(puntoCentralSos)
+                                    }
+                                }
+
+                                val zoomActual = mapView.zoomLevelDouble
+                                ArequipaGeoData.CENTROS_SEGURIDAD
+                                    .filter { centro ->
+                                        when (filtroCapaMapa) {
+                                            "TODOS" -> true
+                                            "HOSPITAL" -> centro.tipo.equals("hospital", ignoreCase = true)
+                                            "COMISARIA" -> centro.tipo.equals("comisaria", ignoreCase = true)
+                                            "REFUGIO" -> !centro.tipo.equals("hospital", ignoreCase = true) && !centro.tipo.equals("comisaria", ignoreCase = true)
+                                            else -> false
                                         }
                                     }
-                                    false
-                                }
-                                mapViewRef = this
-                            }
-                        },
-                        update = { mapView ->
-                            mapView.overlays.clear()
+                                    .forEach { centro ->
+                                        val m = Marker(mapView).apply {
+                                            position = GeoPoint(centro.lat, centro.lng)
+                                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                            relatedObject = centro.tipo
+                                            icon = crearIconoSeguridadDinamico(context, centro.tipo, zoomActual)
+                                            title = centro.nombre
+                                            snippet = "Distrito: ${centro.distrito}"
+                                        }
+                                        mapView.overlays.add(m)
+                                    }
 
-                            // A) Rutas historicamente bloqueadas (anos anteriores) en rojo
-                            ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS.forEach { bloqueo ->
-                                val lineaBloqueo = Polyline().apply {
-                                    addPoint(GeoPoint(bloqueo.latInicio, bloqueo.lngInicio))
-                                    addPoint(GeoPoint(bloqueo.latFin, bloqueo.lngFin))
-                                    outlinePaint.color = AndroidColor.argb(190, 211, 47, 47)
-                                    outlinePaint.strokeWidth = 9f
-                                    title = "VIA CON HISTORIAL DE BLOQUEO: ${bloqueo.nombre}"
-                                }
-                                mapView.overlays.add(lineaBloqueo)
-                            }
-
-                            // B) Ruta sugerida libre de bloqueos (solo visual, sin voz) si aceptaste apoyar
-                            alertaEnApoyo?.let { destino ->
-                                val puntosRuta = ArequipaGeoData.calcularRutaLibreDeBloqueos(
-                                    miLat, miLng, destino.lat, destino.lng
-                                )
-                                val rutaVerde = Polyline().apply {
-                                    puntosRuta.forEach { (lat, lng) -> addPoint(GeoPoint(lat, lng)) }
-                                    outlinePaint.color = AndroidColor.rgb(27, 94, 32)
-                                    outlinePaint.strokeWidth = 12f
-                                    title = "Ruta recomendada libre hacia ${destino.nombre_usuario}"
-                                }
-                                mapView.overlays.add(rutaVerde)
-                            }
-
-                            // C) Senal Infrarroja de Desastres (sin manitos, pulso radial limpio)
-                            alertasActivas.forEach { alerta ->
-                                val centro = GeoPoint(alerta.lat, alerta.lng)
-
-                                val haloExterno = Polygon().apply {
-                                    points = Polygon.pointsAsCircle(centro, 400.0)
-                                    fillPaint.color = AndroidColor.argb(50, 255, 23, 68)
-                                    outlinePaint.color = AndroidColor.argb(130, 213, 0, 0)
-                                    outlinePaint.strokeWidth = 2f
-                                }
-                                val nucleoInfrarrojo = Polygon().apply {
-                                    points = Polygon.pointsAsCircle(centro, 140.0)
-                                    fillPaint.color = AndroidColor.argb(120, 213, 0, 0)
-                                    outlinePaint.color = AndroidColor.RED
+                                val miCentro = GeoPoint(miLat, miLng)
+                                val auraGps = Polygon().apply {
+                                    points = Polygon.pointsAsCircle(miCentro, 100.0)
+                                    fillPaint.color = AndroidColor.argb(75, 229, 231, 235)
+                                    outlinePaint.color = AndroidColor.argb(210, 243, 244, 246)
                                     outlinePaint.strokeWidth = 3f
                                 }
-                                val puntoCentralSos = Polygon().apply {
-                                    points = Polygon.pointsAsCircle(centro, 25.0)
-                                    fillPaint.color = AndroidColor.rgb(198, 40, 40)
-                                    outlinePaint.color = AndroidColor.WHITE
-                                    outlinePaint.strokeWidth = 4f
+                                val puntoGps = Polygon().apply {
+                                    points = Polygon.pointsAsCircle(miCentro, 26.0)
+                                    fillPaint.color = AndroidColor.rgb(243, 244, 246)
+                                    outlinePaint.color = AndroidColor.rgb(255, 69, 0)
+                                    outlinePaint.strokeWidth = 5f
                                 }
-                                mapView.overlays.add(haloExterno)
-                                mapView.overlays.add(nucleoInfrarrojo)
-                                mapView.overlays.add(puntoCentralSos)
-                            }
+                                mapView.overlays.add(auraGps)
+                                mapView.overlays.add(puntoGps)
 
-                                                        // C2) Hospitales, Comisarias PNP y Zonas Seguras (grandes de lejos, se achican al acercar)
-                            val zoomActual = mapView.zoomLevelDouble
-                            ArequipaGeoData.CENTROS_SEGURIDAD.forEach { centro ->
-                                val m = Marker(mapView).apply {
-                                    position = GeoPoint(centro.lat, centro.lng)
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                                    relatedObject = centro.tipo
-                                    icon = crearIconoSeguridadDinamico(context, centro.tipo, zoomActual)
-                                    title = centro.nombre
-                                    snippet = "Distrito: ${centro.distrito}"
-                                }
-                                mapView.overlays.add(m)
-                            }
+                                mapView.invalidate()
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
 
-                            // D) Tu ubicacion GPS actual (punto azul limpio con aura celeste, sin manito)
-                            val miCentro = GeoPoint(miLat, miLng)
-                            val auraGps = Polygon().apply {
-                                points = Polygon.pointsAsCircle(miCentro, 85.0)
-                                fillPaint.color = AndroidColor.argb(45, 2, 119, 189)
-                                outlinePaint.color = AndroidColor.argb(100, 2, 119, 189)
-                                outlinePaint.strokeWidth = 2f
-                            }
-                            val puntoGps = Polygon().apply {
-                                points = Polygon.pointsAsCircle(miCentro, 22.0)
-                                fillPaint.color = AndroidColor.rgb(2, 119, 189)
-                                outlinePaint.color = AndroidColor.WHITE
-                                outlinePaint.strokeWidth = 5f
-                            }
-                            mapView.overlays.add(auraGps)
-                            mapView.overlays.add(puntoGps)
-
-                            mapView.invalidate()
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    // Boton flotante para centrar el mapa en mi ubicacion actual
-                    FloatingActionButton(
-                        onClick = {
-                            mapViewRef?.controller?.animateTo(GeoPoint(miLat, miLng))
-                            mapViewRef?.controller?.setZoom(15.5)
-                        },
-                        containerColor = SuperficieBlanca,
-                        contentColor = AzulPrincipal,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = "Mi ubicacion")
-                    }
-                }
-            }
-
-            // =========================================================================
-            // PESTAÑA 2: ALERTAS (EMISION POR SENSOR + APOYO VECINAL + CHAT)
-            // =========================================================================
-            1 -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item { Spacer(Modifier.height(4.dp)) }
-
-                    // Indicadores de estado de emergencias y red sin internet
-                    item {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Surface(
-                                color = if (alertasActivas.isNotEmpty()) RojoFondoSuave else CelesteSuave,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        "${alertasActivas.size} Emergencias Activas",
-                                        fontWeight = FontWeight.Bold,
-                                        color = AzulOscuroTexto,
-                                        style = MaterialTheme.typography.bodyMedium
+                            val capas = listOf(
+                                Triple("TODOS", "Todo", PlataAceroSerio),
+                                Triple("SOS", "Alertas SOS", NaranjaFuegoSerio),
+                                Triple("HOSPITAL", "Hospitales (H)", NaranjaFuegoSerio),
+                                Triple("COMISARIA", "Comisarias (P)", PlataAceroSerio),
+                                Triple("REFUGIO", "Zonas Seguras (S)", TextoGrisSerio)
+                            )
+                            capas.forEach { (clave, etiqueta, colorActivo) ->
+                                val seleccionado = filtroCapaMapa == clave
+                                FilterChip(
+                                    selected = seleccionado,
+                                    onClick = { filtroCapaMapa = clave },
+                                    label = {
+                                        Text(
+                                            etiqueta,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (seleccionado) FondoCarbonSerio else TextoBlancoSerio
+                                        )
+                                    },
+                                    border = BorderStroke(1.dp, if (seleccionado) colorActivo else BordeGrafito),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        containerColor = SuperficieCarbon.copy(alpha = 0.88f),
+                                        selectedContainerColor = colorActivo
                                     )
-                                    Text(
-                                        "En Arequipa Ciudad",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = GrisTextoSecundario
-                                    )
-                                }
+                                )
                             }
+                        }
 
-                            Surface(
-                                color = CelesteSuave,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f)
+                        Surface(
+                            color = SuperficieCarbon.copy(alpha = 0.90f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, BordeGrafito),
+                            shadowElevation = 4.dp,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(14.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        "Red Mesh P2P",
-                                        fontWeight = FontWeight.Bold,
-                                        color = AzulOscuroTexto,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        "$vecinosMeshCount vecinos cerca sin red",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = GrisTextoSecundario
-                                    )
+                                Text("HUD AREQUIPA • SERIE", style = MaterialTheme.typography.labelSmall, color = NaranjaSuaveSerio)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Box(Modifier.size(10.dp).background(NaranjaFuegoSerio, CircleShape))
+                                    Text("H: Hospital / SOS", style = MaterialTheme.typography.bodySmall, color = TextoBlancoSerio)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Box(Modifier.size(10.dp).background(PlataAceroSerio, CircleShape))
+                                    Text("P: Comisaria / Tu GPS", style = MaterialTheme.typography.bodySmall, color = TextoBlancoSerio)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Box(Modifier.size(10.dp).background(TextoGrisSerio, CircleShape))
+                                    Text("S: Zona Segura", style = MaterialTheme.typography.bodySmall, color = TextoBlancoSerio)
                                 }
                             }
                         }
-                    }
 
-                    // Panel de Sensor + Boton para Emitir Alerta (en la seccion de Alertas)
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (estadoSensor.riesgoRealDetectado) RojoFondoSuave else CelesteSuave
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        FloatingActionButton(
+                            onClick = {
+                                mapViewRef?.controller?.animateTo(GeoPoint(miLat, miLng))
+                                mapViewRef?.controller?.setZoom(15.5)
+                            },
+                            containerColor = NaranjaFuegoSerio,
+                            contentColor = TextoBlancoSerio,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            Icon(Icons.Default.LocationOn, contentDescription = "Centrar en mi ubicacion")
+                        }
+                    }
+                }
+
+                1 -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(FondoCarbonSerio)
+                            .padding(padding)
+                            .padding(horizontal = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item { Spacer(Modifier.height(6.dp)) }
+
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (estadoSensor.riesgoRealDetectado) Icons.Default.Warning else Icons.Default.Notifications,
-                                        contentDescription = null,
-                                        tint = if (estadoSensor.riesgoRealDetectado) RojoInfrarrojo else AzulPrincipal
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = estadoSensor.detalleSensor,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = AzulOscuroTexto,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                Surface(
+                                    color = SuperficieCarbon,
+                                    border = BorderStroke(1.dp, NaranjaFuegoSerio.copy(alpha = 0.55f)),
+                                    shape = RoundedCornerShape(18.dp),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(13.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "EMERGENCIAS",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = NaranjaSuaveSerio
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .background(NaranjaFuegoSerio, CircleShape)
+                                            )
+                                        }
+                                        Text(
+                                            text = "${alertasActivas.size}",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = TextoBlancoSerio
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(5.dp)
+                                                .background(NaranjaFuegoSerio.copy(alpha = 0.22f), CircleShape)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(if (alertasActivas.isNotEmpty()) 0.78f else 0.15f)
+                                                    .fillMaxHeight()
+                                                    .background(NaranjaFuegoSerio, CircleShape)
+                                            )
+                                        }
+                                        Text(
+                                            text = "Activas en Arequipa",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextoGrisSerio
+                                        )
+                                    }
                                 }
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Surface(
+                                    color = SuperficieCarbon,
+                                    border = BorderStroke(1.dp, BordeGrafito),
+                                    shape = RoundedCornerShape(18.dp),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            tipoAlertaEmitir = if (estadoSensor.tipoRiesgoDetectado != "NINGUNO") estadoSensor.tipoRiesgoDetectado else "deslizamiento"
-                                            mostrarDialogoEmitir = true
-                                        },
-                                        enabled = estadoSensor.riesgoRealDetectado,
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = RojoInfrarrojo,
-                                            disabledContainerColor = Color(0xFFB0BEC5)
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
+                                    Column(
+                                        modifier = Modifier.padding(13.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Icon(Icons.Default.Warning, null, tint = Color.White)
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("EMITIR ALERTA A AREQUIPA", fontWeight = FontWeight.Bold, color = Color.White)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "RED MESH P2P",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = PlataAceroSerio
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .background(PlataAceroSerio, CircleShape)
+                                            )
+                                        }
+                                        Text(
+                                            text = "$vecinosMeshCount",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = TextoBlancoSerio
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(5.dp)
+                                                .background(PlataAceroSerio.copy(alpha = 0.2f), CircleShape)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(if (vecinosMeshCount > 0) 0.72f else 0.25f)
+                                                    .fillMaxHeight()
+                                                    .background(PlataAceroSerio, CircleShape)
+                                            )
+                                        }
+                                        Text(
+                                            text = "Vecinos cerca sin red",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextoGrisSerio
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                border = BorderStroke(
+                                    1.2.dp,
+                                    if (estadoSensor.riesgoRealDetectado) NaranjaFuegoSerio else BordeGrafito
+                                ),
+                                shape = RoundedCornerShape(18.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(
+                                                    if (estadoSensor.riesgoRealDetectado) NaranjaFuegoSerio.copy(alpha = 0.22f) else SuperficieElevadaCarbon,
+                                                    RoundedCornerShape(10.dp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (estadoSensor.riesgoRealDetectado) Icons.Default.Warning else Icons.Default.Notifications,
+                                                contentDescription = null,
+                                                tint = if (estadoSensor.riesgoRealDetectado) NaranjaFuegoSerio else PlataAceroSerio,
+                                                modifier = Modifier.size(19.dp)
+                                            )
+                                        }
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            text = estadoSensor.detalleSensor,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextoBlancoSerio,
+                                            modifier = Modifier.weight(1f)
+                                        )
                                     }
 
-                                    if (!estadoSensor.riesgoRealDetectado) {
-                                        OutlinedButton(
-                                            onClick = { sensoresManager.activarConfirmacionSensorPrueba("sismo") },
-                                            shape = RoundedCornerShape(10.dp)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                tipoAlertaEmitir = if (estadoSensor.tipoRiesgoDetectado != "NINGUNO") estadoSensor.tipoRiesgoDetectado else "deslizamiento"
+                                                mostrarDialogoEmitir = true
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = NaranjaFuegoSerio),
+                                            border = BorderStroke(1.dp, NaranjaSuaveSerio.copy(alpha = 0.6f)),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                                            modifier = Modifier.weight(1.25f)
                                         ) {
-                                            Text("Probar Sensor", style = MaterialTheme.typography.labelSmall)
+                                            Icon(Icons.Default.Warning, null, tint = TextoBlancoSerio, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                "EMITIR SOS",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = TextoBlancoSerio,
+                                                maxLines = 1
+                                            )
+                                        }
+
+                                        Button(
+                                            onClick = { sensoresManager.activarConfirmacionSensorPrueba("sismo") },
+                                            colors = ButtonDefaults.buttonColors(containerColor = SuperficieElevadaCarbon),
+                                            border = BorderStroke(1.dp, BordeGrafito),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
+                                            modifier = Modifier.weight(0.95f)
+                                        ) {
+                                            Text(
+                                                "Probar Sensor",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = PlataAceroSerio,
+                                                maxLines = 1
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if (bannerAviso != null) {
+                        if (bannerAviso != null) {
+                            item {
+                                Surface(
+                                    color = SuperficieElevadaCarbon,
+                                    border = BorderStroke(1.dp, NaranjaFuegoSerio.copy(alpha = 0.65f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = bannerAviso!!,
+                                            color = TextoBlancoSerio,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { bannerAviso = null },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Ocultar aviso", tint = PlataAceroSerio, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         item {
-                            Surface(
-                                color = VerdeFondoSuave,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = bannerAviso!!,
-                                    color = VerdeAyuda,
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.padding(12.dp)
+                                    "ALERTAS VECINALES ACTIVAS",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = TextoGrisSerio
+                                )
+                                Text(
+                                    "${alertasActivas.size} REGISTRO(S)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NaranjaSuaveSerio
                                 )
                             }
                         }
-                    }
 
-                    item {
-                        Text(
-                            "Alertas Vecinales Activas (${alertasActivas.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = AzulOscuroTexto
-                        )
-                    }
-
-                    items(alertasActivas) { alerta ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = SuperficieBlanca),
-                            shape = RoundedCornerShape(14.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                        items(alertasActivas) { alerta ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                border = BorderStroke(1.dp, BordeGrafito),
+                                shape = RoundedCornerShape(18.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
+                                Column(
+                                    modifier = Modifier.padding(15.dp),
+                                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            color = NaranjaFuegoSerio.copy(alpha = 0.18f),
+                                            border = BorderStroke(1.dp, NaranjaFuegoSerio.copy(alpha = 0.7f)),
+                                            shape = RoundedCornerShape(9.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .background(NaranjaFuegoSerio, CircleShape)
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = alerta.categoria.uppercase(),
+                                                    color = NaranjaSuaveSerio,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            color = SuperficieElevadaCarbon,
+                                            border = BorderStroke(1.dp, BordeGrafito),
+                                            shape = RoundedCornerShape(9.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(Icons.Default.Person, null, tint = PlataAceroSerio, modifier = Modifier.size(15.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                                Text(
+                                                    text = "${alerta.voluntarios_count} en apoyo",
+                                                    color = TextoBlancoSerio,
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Text(
+                                        text = "${alerta.nombre_usuario} — ${alerta.distrito}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextoBlancoSerio
+                                    )
+                                    if (alerta.sector_referencia.isNotBlank()) {
+                                        Text(
+                                            text = "Ubicacion: ${alerta.sector_referencia}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = PlataAceroSerio,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        text = alerta.descripcion,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextoGrisSerio
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                alertaEnApoyo = alerta
+                                                alertasActivas = alertasActivas.map {
+                                                    if (it.alerta_id == alerta.alerta_id) it.copy(voluntarios_count = it.voluntarios_count + 1) else it
+                                                }
+                                                pestanaAnterior = pestanaActiva
+                                                pestanaActiva = 0
+                                                mapViewRef?.controller?.animateTo(GeoPoint(alerta.lat, alerta.lng))
+
+                                                scope.launch {
+                                                    try {
+                                                        apiService.confirmarAyudaEnCamino(
+                                                            alerta.alerta_id,
+                                                            ApoyoRequest(perfil.usuarioId, perfil.nombreCompleto, miLat, miLng)
+                                                        )
+                                                    } catch (_: Exception) {
+                                                        meshManager.retransmitirPaquete(
+                                                            PaqueteMesh("APOYO_EN_CAMINO", alerta.alerta_id, perfil.nombreCompleto)
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = NaranjaFuegoSerio),
+                                            border = BorderStroke(1.dp, NaranjaSuaveSerio.copy(alpha = 0.65f)),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 11.dp),
+                                            modifier = Modifier.weight(1.25f)
+                                        ) {
+                                            Icon(Icons.Default.ArrowForward, null, tint = TextoBlancoSerio, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Ir en Apoyo", style = MaterialTheme.typography.labelLarge, color = TextoBlancoSerio, maxLines = 1)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                alertaChatAbierto = alerta
+                                                scope.launch {
+                                                    try {
+                                                        mensajesChat = apiService.obtenerChat(alerta.alerta_id).mensajes
+                                                    } catch (_: Exception) {
+                                                        val locales = dbLocal.alertaDao().obtenerChatPorAlerta(alerta.alerta_id)
+                                                        mensajesChat = locales.map {
+                                                            MensajeChatDto(
+                                                                remitente_id = it.remitenteId,
+                                                                nombre_remitente = it.nombreRemitente,
+                                                                rol = it.rol,
+                                                                mensaje = it.mensaje,
+                                                                origen_mesh = it.origenMesh
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = SuperficieElevadaCarbon),
+                                            border = BorderStroke(1.dp, BordeGrafito),
+                                            shape = RoundedCornerShape(14.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp),
+                                            modifier = Modifier.weight(0.85f)
+                                        ) {
+                                            Icon(Icons.Default.Email, null, tint = PlataAceroSerio, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(5.dp))
+                                            Text("Chat", style = MaterialTheme.typography.labelLarge, color = TextoBlancoSerio, maxLines = 1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(FondoCarbonSerio)
+                            .padding(padding)
+                            .padding(horizontal = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item { Spacer(Modifier.height(6.dp)) }
+
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                border = BorderStroke(
+                                    1.2.dp,
+                                    if (registroCatastrofeActivo) NaranjaFuegoSerio else BordeGrafito
+                                ),
+                                shape = RoundedCornerShape(18.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(9.dp)
+                                                .background(
+                                                    if (registroCatastrofeActivo) NaranjaFuegoSerio else TextoGrisSerio,
+                                                    CircleShape
+                                                )
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = if (registroCatastrofeActivo) {
+                                                "BITACORA CATASTROFICA ACTIVA (DESDE ADMIN WEB)"
+                                            } else {
+                                                "BITACORA CATASTROFICA EN ESPERA"
+                                            },
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = if (registroCatastrofeActivo) NaranjaSuaveSerio else PlataAceroSerio
+                                        )
+                                    }
+
+                                    Text(
+                                        text = if (registroCatastrofeActivo) {
+                                            "Registrando automaticamente fecha, hora, evento, ubicacion y coordenadas activados por la consola central."
+                                        } else {
+                                            "Cuando la consola central web active el modo catastrofe o terremoto, aqui apareceran automaticamente todos los registros."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextoGrisSerio
+                                    )
+                                }
+                            }
+                        }
+
+                        if (registrosCatastrofeAutomaticos.isNotEmpty()) {
+                            item {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Surface(
-                                        color = RojoFondoSuave,
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            text = alerta.categoria.uppercase(),
-                                            color = RojoInfrarrojo,
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-
-                                    Surface(
-                                        color = VerdeFondoSuave,
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(Icons.Default.Person, null, tint = VerdeAyuda, modifier = Modifier.size(16.dp))
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                text = "${alerta.voluntarios_count} en apoyo",
-                                                color = VerdeAyuda,
-                                                fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Text(
-                                    text = "${alerta.nombre_usuario} — ${alerta.distrito}",
-                                    fontWeight = FontWeight.Bold,
-                                    color = AzulOscuroTexto
-                                )
-                                if (alerta.sector_referencia.isNotBlank()) {
                                     Text(
-                                        text = "Ubicacion: ${alerta.sector_referencia}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = AzulPrincipal,
-                                        fontWeight = FontWeight.Medium
+                                        "EVENTOS DE CATASTROFE REGISTRADOS",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = TextoBlancoSerio
+                                    )
+                                    Text(
+                                        "${registrosCatastrofeAutomaticos.size} EVENTO(S)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = NaranjaSuaveSerio
                                     )
                                 }
-                                Text(
-                                    text = alerta.descripcion,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = AzulOscuroTexto
-                                )
+                            }
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            items(registrosCatastrofeAutomaticos) { ev ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                    border = BorderStroke(1.dp, NaranjaFuegoSerio.copy(alpha = 0.65f)),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            alertaEnApoyo = alerta
-                                            alertasActivas = alertasActivas.map {
-                                                if (it.alerta_id == alerta.alerta_id) it.copy(voluntarios_count = it.voluntarios_count + 1) else it
-                                            }
-                                            // Cambiar automaticamente a la pestana Mapa y centrar en la ruta
-                                            pestanaActiva = 0
-                                            mapViewRef?.controller?.animateTo(GeoPoint(alerta.lat, alerta.lng))
-
-                                            scope.launch {
-                                                try {
-                                                    apiService.confirmarAyudaEnCamino(
-                                                        alerta.alerta_id,
-                                                        ApoyoRequest(perfil.usuarioId, perfil.nombreCompleto, miLat, miLng)
-                                                    )
-                                                } catch (_: Exception) {
-                                                    meshManager.retransmitirPaquete(
-                                                        PaqueteMesh("APOYO_EN_CAMINO", alerta.alerta_id, perfil.nombreCompleto)
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = VerdeAyuda),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Ir en Apoyo", color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            alertaChatAbierto = alerta
-                                            scope.launch {
-                                                try {
-                                                    mensajesChat = apiService.obtenerChat(alerta.alerta_id).mensajes
-                                                } catch (_: Exception) {
-                                                    val locales = dbLocal.alertaDao().obtenerChatPorAlerta(alerta.alerta_id)
-                                                    mensajesChat = locales.map {
-                                                        MensajeChatDto(
-                                                            remitente_id = it.remitenteId,
-                                                            nombre_remitente = it.nombreRemitente,
-                                                            rol = it.rol,
-                                                            mensaje = it.mensaje,
-                                                            origen_mesh = it.origenMesh
-                                                        )
-                                                    }
-                                                }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                color = NaranjaFuegoSerio.copy(alpha = 0.2f),
+                                                border = BorderStroke(1.dp, NaranjaFuegoSerio.copy(alpha = 0.75f)),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = ev.tipoEvento,
+                                                    color = NaranjaSuaveSerio,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp)
+                                                )
                                             }
-                                        },
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Icon(Icons.Default.Email, null, tint = AzulPrincipal, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Chat", color = AzulPrincipal)
+                                            Text(
+                                                text = ev.fechaHora,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = PlataAceroSerio
+                                            )
+                                        }
+
+                                        Text(
+                                            text = "Que ocurrio: ${ev.queOcurrio}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextoBlancoSerio
+                                        )
+                                        Text(
+                                            text = "Donde ocurrio: ${ev.dondeOcurrio}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = PlataAceroSerio
+                                        )
+                                        Text(
+                                            text = "Coordenadas: ${ev.coordenadas} • Fuente: ${ev.origen}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextoGrisSerio
+                                        )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    item { Spacer(Modifier.height(24.dp)) }
-                }
-            }
+                        item {
+                            Text(
+                                "Analisis de Riesgos e Historial de Bloqueos (Arequipa)",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextoBlancoSerio
+                            )
+                            Text(
+                                "Registros de anos anteriores usados para calcular rutas limpias en emergencias:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextoGrisSerio
+                            )
+                        }
 
-            // =========================================================================
-            // PESTAÑA 3: RIESGOS E HISTORIAL (SEPARADO)
-            // =========================================================================
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        Text(
-                            "Analisis de Riesgos e Historial de Bloqueos (Arequipa)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = AzulOscuroTexto
-                        )
-                        Text(
-                            "Registros de anos anteriores usados para calcular rutas limpias en emergencias:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GrisTextoSecundario
-                        )
-                    }
-
-                    items(ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS) { ruta ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = SuperficieBlanca),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text(ruta.nombre, fontWeight = FontWeight.Bold, color = RojoInfrarrojo)
-                                Spacer(Modifier.height(4.dp))
-                                Text(ruta.riesgoHistorico, style = MaterialTheme.typography.bodySmall, color = AzulOscuroTexto)
+                        items(ArequipaGeoData.RUTAS_BLOQUEADAS_HISTORICAS) { ruta ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieCarbon),
+                                border = BorderStroke(1.dp, BordeGrafito),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(ruta.nombre, style = MaterialTheme.typography.titleMedium, color = NaranjaSuaveSerio)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(ruta.riesgoHistorico, style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                }
                             }
                         }
-                    }
 
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = CelesteSuave),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Protocolos de Seguridad Ciudadana", fontWeight = FontWeight.Bold, color = AzulOscuroTexto)
-                                Text("• Huaicos y Torrenteras: Nunca cruces puentes inundados en Chullo, San Lazaro o Anashuayco.", style = MaterialTheme.typography.bodySmall)
-                                Text("• Sismos en Arequipa: Dirigete a las 38 plazas, estadios o postas registradas en el mapa.", style = MaterialTheme.typography.bodySmall)
-                                Text("• Sin Internet: Manten Bluetooth y Wi-Fi encendidos; tus alertas y chat saltan por la Red Mesh vecinal.", style = MaterialTheme.typography.bodySmall)
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SuperficieElevadaCarbon),
+                                border = BorderStroke(1.dp, BordeGrafito),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Protocolos de Seguridad Ciudadana", style = MaterialTheme.typography.titleMedium, color = TextoBlancoSerio)
+                                    Text("• Huaicos y Torrenteras: Nunca cruces puentes inundados en Chullo, San Lazaro o Anashuayco.", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                    Text("• Sismos en Arequipa: Dirigete a las 38 plazas, estadios o postas registradas en el mapa.", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                    Text("• Sin Internet: Manten Bluetooth y Wi-Fi encendidos; tus alertas y chat saltan por la Red Mesh vecinal.", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio)
+                                }
                             }
                         }
+
+                        item { Spacer(Modifier.height(24.dp)) }
                     }
                 }
             }
         }
     }
 
-    // DIALOGO PARA EMITIR ALERTA CON CONTEXTO CORTO
     if (mostrarDialogoEmitir) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoEmitir = false },
-            title = { Text("Emitir Alerta Comunitaria", fontWeight = FontWeight.Bold) },
+            containerColor = SuperficieCarbon,
+            titleContentColor = TextoBlancoSerio,
+            textContentColor = TextoGrisSerio,
+            title = { Text("Emitir Alerta Comunitaria", style = MaterialTheme.typography.titleLarge, color = TextoBlancoSerio) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         "Se enviara tu ubicacion exacta en ${perfil.distrito} (${perfil.sectorReferencia}) a los vecinos de Arequipa.",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextoGrisSerio
                     )
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -969,15 +1669,25 @@ fun PantallaPrincipalArequipa(
                             FilterChip(
                                 selected = tipoAlertaEmitir == cat,
                                 onClick = { tipoAlertaEmitir = cat },
-                                label = { Text(cat, style = MaterialTheme.typography.labelSmall) }
+                                label = {
+                                    Text(
+                                        cat,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (tipoAlertaEmitir == cat) TextoBlancoSerio else PlataAceroSerio
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = SuperficieElevadaCarbon,
+                                    selectedContainerColor = NaranjaFuegoSerio
+                                )
                             )
                         }
                     }
                     OutlinedTextField(
                         value = contextoAlertaEmitir,
                         onValueChange = { contextoAlertaEmitir = it },
-                        label = { Text("Contexto breve del percance") },
-                        placeholder = { Text("Ej. Inundacion en calle, vecino sin app atrapado") },
+                        label = { Text("Contexto breve del percance", style = MaterialTheme.typography.bodySmall, color = PlataAceroSerio) },
+                        placeholder = { Text("Ej. Inundacion en calle, vecino sin app atrapado", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1041,29 +1751,33 @@ fun PantallaPrincipalArequipa(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RojoInfrarrojo)
+                    colors = ButtonDefaults.buttonColors(containerColor = NaranjaFuegoSerio)
                 ) {
-                    Text("ENVIAR AHORA", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("ENVIAR AHORA", style = MaterialTheme.typography.labelLarge, color = TextoBlancoSerio)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarDialogoEmitir = false }) { Text("Cancelar") }
+                TextButton(onClick = { mostrarDialogoEmitir = false }) {
+                    Text("Cancelar", style = MaterialTheme.typography.labelLarge, color = PlataAceroSerio)
+                }
             }
         )
     }
 
-    // DIALOGO DE CHAT DIRECTO ENTRE AFECTADO Y VOLUNTARIO (Online + Red Mesh)
     if (alertaChatAbierto != null) {
         val alertaActual = alertaChatAbierto!!
         AlertDialog(
             onDismissRequest = { alertaChatAbierto = null },
+            containerColor = SuperficieCarbon,
+            titleContentColor = TextoBlancoSerio,
+            textContentColor = TextoGrisSerio,
             title = {
                 Column {
-                    Text("Chat de Coordinacion Directa", fontWeight = FontWeight.Bold)
+                    Text("Chat de Coordinacion Directa", style = MaterialTheme.typography.titleLarge, color = TextoBlancoSerio)
                     Text(
                         "Con ${alertaActual.nombre_usuario} (${alertaActual.distrito})",
                         style = MaterialTheme.typography.bodySmall,
-                        color = GrisTextoSecundario
+                        color = TextoGrisSerio
                     )
                 }
             },
@@ -1085,14 +1799,14 @@ fun PantallaPrincipalArequipa(
                                 Text(
                                     "Escribe aqui si necesitas herramientas (pala, linterna, botiquin) o indicaciones exactas para llegar.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = GrisTextoSecundario
+                                    color = TextoGrisSerio
                                 )
                             }
                         }
                         items(mensajesChat) { msg ->
                             val esMio = msg.remitente_id == perfil.usuarioId
                             Surface(
-                                color = if (esMio) CelesteSuave else FondoHielo,
+                                color = if (esMio) NaranjaFuegoSerio.copy(alpha = 0.22f) else SuperficieElevadaCarbon,
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1100,10 +1814,9 @@ fun PantallaPrincipalArequipa(
                                     Text(
                                         text = "${msg.nombre_remitente} ${if (msg.origen_mesh) "[Mesh]" else ""}",
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AzulPrincipal
+                                        color = if (esMio) NaranjaSuaveSerio else PlataAceroSerio
                                     )
-                                    Text(msg.mensaje, style = MaterialTheme.typography.bodySmall)
+                                    Text(msg.mensaje, style = MaterialTheme.typography.bodySmall, color = TextoBlancoSerio)
                                 }
                             }
                         }
@@ -1117,7 +1830,7 @@ fun PantallaPrincipalArequipa(
                         OutlinedTextField(
                             value = textoChatInput,
                             onValueChange = { textoChatInput = it },
-                            placeholder = { Text("Ej. Llevo pala y cuerda...") },
+                            placeholder = { Text("Ej. Llevo pala y cuerda...", style = MaterialTheme.typography.bodySmall, color = TextoGrisSerio) },
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
@@ -1153,17 +1866,16 @@ fun PantallaPrincipalArequipa(
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Enviar", tint = AzulPrincipal)
+                            Icon(Icons.Default.Send, contentDescription = "Enviar", tint = NaranjaFuegoSerio)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { alertaChatAbierto = null }) { Text("Cerrar Chat") }
+                TextButton(onClick = { alertaChatAbierto = null }) {
+                    Text("Cerrar Chat", style = MaterialTheme.typography.labelLarge, color = PlataAceroSerio)
+                }
             }
         )
     }
 }
-
-
-

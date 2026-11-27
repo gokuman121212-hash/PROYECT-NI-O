@@ -1,11 +1,10 @@
-﻿import asyncio
+import asyncio
 import uuid
 import hashlib
 from datetime import datetime, timezone, timedelta
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-from supabase import create_client, Client
 from app.core.config import settings
 from app.models.schemas import AlertaCreate, EstadoAlerta, UsuarioRegistroRequest
 from app.integrations.external_risks import calcular_distancia_metros, evaluar_proximidad_geografica
@@ -15,39 +14,39 @@ class DualDatabaseManager:
         self.firebase_ready = False
         self.supabase_ready = False
         self.db_firestore = None
-        self.db_supabase: Client | None = None
         self.cache_local: list[dict] = []
         self.usuarios_local: dict[str, dict] = {}
         self.chat_local: dict[str, list[dict]] = {}
         self._init_clients()
 
     def _init_clients(self):
-        if os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
+        cred_path = settings.FIREBASE_CREDENTIALS_PATH
+        if not os.path.isabs(cred_path):
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            candidate = os.path.join(backend_dir, cred_path)
+            if os.path.exists(candidate):
+                cred_path = candidate
+
+        if os.path.exists(cred_path):
             try:
                 if not firebase_admin._apps:
-                    cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+                    cred = credentials.Certificate(cred_path)
                     firebase_admin.initialize_app(cred)
                 self.db_firestore = firestore.client()
                 self.firebase_ready = True
             except Exception as e:
                 print(f"[WARN] Firebase no disponible: {e}")
 
-        if settings.SUPABASE_URL.startswith("https://") and "tu-proyecto" not in settings.SUPABASE_URL:
-            try:
-                self.db_supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-                self.supabase_ready = True
-            except Exception as e:
-                print(f"[WARN] Supabase no disponible: {e}")
-
     def _hash_pass(self, raw: str) -> str:
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     async def registrar_usuario_dual(self, req: UsuarioRegistroRequest) -> dict:
+        tel = req.telefono.strip()
         usuario_id = f"usr_{uuid.uuid4().hex[:10]}"
         user_doc = {
             "usuario_id": usuario_id,
             "nombre_completo": req.nombre_completo,
-            "telefono": req.telefono.strip(),
+            "telefono": tel,
             "password_hash": self._hash_pass(req.password),
             "distrito": req.distrito,
             "sector_referencia": req.sector_referencia,
@@ -61,26 +60,16 @@ class DualDatabaseManager:
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(
                     None,
-                    lambda: self.db_firestore.collection("usuarios_arequipa").document(req.telefono.strip()).set(user_doc)
+                    lambda: self.db_firestore.collection("usuarios_arequipa").document(tel).set(user_doc)
                 )
-                nodo = "FIREBASE + SUPABASE" if self.supabase_ready else "FIREBASE_PRIMARY"
-            except Exception:
-                pass
-        if self.supabase_ready:
-            try:
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(
-                    None,
-                    lambda: self.db_supabase.table("usuarios_arequipa").upsert(user_doc).execute()
-                )
-                if nodo == "CACHE_LOCAL_SEGURO":
-                    nodo = "SUPABASE_FAILOVER"
+                nodo = "FIREBASE_PRIMARY"
             except Exception:
                 pass
 
-        self.usuarios_local[req.telefono.strip()] = user_doc
-        user_doc["nodo_guardado"] = nodo
-        return user_doc
+        self.usuarios_local[tel] = user_doc
+        resultado = dict(user_doc)
+        resultado["nodo_guardado"] = nodo
+        return resultado
 
     async def autenticar_usuario_dual(self, telefono: str, password: str) -> dict | None:
         tel = telefono.strip()
@@ -95,27 +84,15 @@ class DualDatabaseManager:
                     lambda: self.db_firestore.collection("usuarios_arequipa").document(tel).get()
                 )
                 if snap.exists:
-                    encontrado = snap.to_dict()
+                    encontrado = dict(snap.to_dict())
                     encontrado["nodo_guardado"] = "FIREBASE_PRIMARY"
             except Exception:
                 pass
 
-        if not encontrado and self.supabase_ready:
-            try:
-                loop = asyncio.get_running_loop()
-                res = await loop.run_in_executor(
-                    None,
-                    lambda: self.db_supabase.table("usuarios_arequipa").select("*").eq("telefono", tel).execute()
-                )
-                if res.data:
-                    encontrado = res.data[0]
-                    encontrado["nodo_guardado"] = "SUPABASE_FAILOVER"
-            except Exception:
-                pass
-
         if not encontrado:
-            encontrado = self.usuarios_local.get(tel)
-            if encontrado:
+            local_user = self.usuarios_local.get(tel)
+            if local_user:
+                encontrado = dict(local_user)
                 encontrado["nodo_guardado"] = "CACHE_LOCAL_SEGURO"
 
         if encontrado and encontrado.get("password_hash") == pwd_hash:
@@ -129,29 +106,6 @@ class DualDatabaseManager:
         await loop.run_in_executor(
             None,
             lambda: self.db_firestore.collection("alertas_activas").document(data["alerta_id"]).set(data)
-        )
-
-    async def _save_supabase(self, data: dict):
-        if not self.supabase_ready:
-            raise ConnectionError("Supabase no inicializado")
-        row_supabase = {
-            "alerta_id": data["alerta_id"],
-            "usuario_id": data["usuario_id"],
-            "latitud": data["latitud"],
-            "longitud": data["longitud"],
-            "tipo": data["tipo"],
-            "descripcion": data["descripcion"],
-            "nivel_bateria": data["nivel_bateria"],
-            "origen_offline_mesh": data["origen_offline_mesh"],
-            "estado": data["estado"],
-            "confianza_ia": data["confianza_ia"],
-            "indice_riesgo": data["indice_riesgo"],
-            "timestamp": data["timestamp"]
-        }
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self.db_supabase.table("alertas_archivo").insert(row_supabase).execute()
         )
 
     async def detectar_enjambre_espaciotemporal(self, lat: float, lng: float) -> dict:
@@ -172,6 +126,26 @@ class DualDatabaseManager:
             "enjambre_confirmado": es_enjambre,
             "nivel_prioridad": "P1 - CRITICO ENJAMBRE" if es_enjambre else "P2 - ALTA PRIORIDAD"
         }
+    def _es_duplicado_misma_fecha(self, existentes: list[dict], tipo_val: str, fecha_iso: str, lat: float, lng: float, distrito: str) -> dict | None:
+        dia_nuevo = str(fecha_iso)[:10]
+        for item in existentes:
+            if str(item.get("estado", "")) == EstadoAlerta.ARCHIVADA.value:
+                continue
+            if str(item.get("tipo", "")).lower() != str(tipo_val).lower():
+                continue
+            dia_item = str(item.get("timestamp", ""))[:10]
+            if dia_item != dia_nuevo:
+                continue
+            mismo_distrito = str(item.get("distrito", "")).strip().lower() == str(distrito or "").strip().lower()
+            cerca = False
+            try:
+                dist_m = calcular_distancia_metros(lat, lng, float(item["latitud"]), float(item["longitud"]))
+                cerca = dist_m <= 5000.0
+            except Exception:
+                cerca = mismo_distrito
+            if cerca or mismo_distrito:
+                return item
+        return None
 
     async def guardar_alerta_redundante(self, alerta: AlertaCreate, confianza_ia: float, indice_riesgo: float = 0.85) -> dict:
         alerta_id = str(uuid.uuid4())
@@ -181,6 +155,21 @@ class DualDatabaseManager:
 
         riesgo_ajustado = min(0.99, round(indice_riesgo * geo_eval["factor_multiplicador"] + (0.10 if enjambre_eval["enjambre_confirmado"] else 0.0), 2))
         confianza_ajustada = min(0.99, round(confianza_ia + (0.08 if enjambre_eval["enjambre_confirmado"] else 0.0), 2))
+
+        existentes = await self.obtener_todas_alertas(solo_activas=True)
+        duplicado = self._es_duplicado_misma_fecha(
+            existentes=existentes,
+            tipo_val=alerta.tipo.value,
+            fecha_iso=ahora.isoformat(),
+            lat=alerta.latitud,
+            lng=alerta.longitud,
+            distrito=alerta.distrito or "Arequipa"
+        )
+        if duplicado:
+            copia = dict(duplicado)
+            copia["duplicado_evitado"] = True
+            copia["nodo_guardado"] = "DEDUPLICADO_MISMA_FECHA"
+            return copia
 
         payload = {
             "alerta_id": alerta_id,
@@ -212,14 +201,8 @@ class DualDatabaseManager:
         try:
             await asyncio.wait_for(self._save_firebase(payload), timeout=3.0)
             nodo_usado = "FIREBASE_PRIMARY"
-            if self.supabase_ready:
-                asyncio.create_task(self._save_supabase(payload))
         except Exception:
-            try:
-                await asyncio.wait_for(self._save_supabase(payload), timeout=4.0)
-                nodo_usado = "SUPABASE_FAILOVER"
-            except Exception:
-                pass
+            pass
 
         payload["nodo_guardado"] = nodo_usado
         self.cache_local.append(payload)
